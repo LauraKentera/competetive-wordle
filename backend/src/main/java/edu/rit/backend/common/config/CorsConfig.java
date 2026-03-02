@@ -1,4 +1,4 @@
-package edu.rit.competitivewordle.common.config;
+package edu.rit.backend.common.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
