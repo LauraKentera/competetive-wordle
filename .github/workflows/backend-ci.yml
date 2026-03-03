@@ -31,4 +31,4 @@ jobs:
         run: mvn clean verify
 
       - name: Build Docker image
-        run: docker build -t competitive-wordle-backend .
+        run: docker build --no-cache -t competitive-wordle-backend .
