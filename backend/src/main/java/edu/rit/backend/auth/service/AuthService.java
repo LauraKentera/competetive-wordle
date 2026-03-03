@@ -7,6 +7,7 @@ import edu.rit.backend.user.model.User;
 import edu.rit.backend.user.repo.UserRepository;
 import edu.rit.backend.user.service.UserService;
 
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,7 +45,7 @@ public class AuthService {
                 .orElseThrow(() -> new IllegalArgumentException("Invalid username or password"));
 
         if (!encoder.matches(password, user.getPasswordHash())) {
-            throw new IllegalArgumentException("Invalid username or password");
+            throw new BadCredentialsException("Invalid username or password");
         }
 
         String token = jwtService.generateAccessToken(user);

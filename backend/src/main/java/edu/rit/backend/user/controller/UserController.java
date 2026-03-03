@@ -20,4 +20,13 @@ public class UserController {
         var user = users.findById(id).orElseThrow(() -> new IllegalArgumentException("User not found"));
         return new UserResponse(user.getId(), user.getUsername(), user.getRole());
     }
+
+    @GetMapping("/api/me")
+    public UserResponse me(org.springframework.security.core.Authentication authentication) {
+        String username = authentication.getName();
+        var user = users.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        return new UserResponse(user.getId(), user.getUsername(), user.getRole());
+    }
 }

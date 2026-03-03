@@ -24,6 +24,9 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @Configuration
 @EnableWebSecurity
@@ -84,5 +87,15 @@ public class SecurityConfig {
                 );
 
         return http.build();
+    }
+
+    @RestController
+    @RequestMapping("/api/test")
+    public class TestController {
+
+        @GetMapping("/secure")
+        public String secure() {
+            return "secured";
+        }
     }
 }
