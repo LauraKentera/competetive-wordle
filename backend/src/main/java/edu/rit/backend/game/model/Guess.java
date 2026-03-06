@@ -1,7 +1,7 @@
 package edu.rit.backend.game.model;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Objects;
 
 @Entity
@@ -18,7 +18,7 @@ public class Guess {
     @Column(name = "player_id", nullable = false)
     private Long playerId;
 
-    @Column(name = "guess_word", nullable = false, length = 10)
+    @Column(name = "guess_word", nullable = false, length = 5)
     private String guessWord;
 
     @Column(name = "result", nullable = false, length = 10)
@@ -28,7 +28,7 @@ public class Guess {
     private Integer attemptNumber;
 
     @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "game_id", nullable = false, insertable = false, updatable = false)
@@ -43,7 +43,7 @@ public class Guess {
         this.guessWord = guessWord;
         this.result = result;
         this.attemptNumber = attemptNumber;
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = Instant.now();
     }
 
     public Long getId() {
@@ -94,11 +94,11 @@ public class Guess {
         this.attemptNumber = attemptNumber;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
+    public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
 

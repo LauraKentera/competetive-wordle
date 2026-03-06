@@ -7,3 +7,14 @@ CREATE TABLE IF NOT EXISTS users (
     role VARCHAR(20) NOT NULL DEFAULT 'USER',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
+
+CREATE TABLE IF NOT EXISTS guesses (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    game_id BIGINT NOT NULL,
+    player_id BIGINT NOT NULL,
+    guess_word VARCHAR(5) NOT NULL,
+    result VARCHAR(10) NOT NULL,
+    attempt_number INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_guesses_game FOREIGN KEY (game_id) REFERENCES games(id)
+    );
