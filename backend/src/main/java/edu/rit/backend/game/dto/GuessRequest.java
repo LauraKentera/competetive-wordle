@@ -1,4 +1,7 @@
 package edu.rit.backend.game.dto;
 
-public record GuessRequest(String guess) {
+/**
+ * Request body for submitting a guess. Use "word" to match Postman/API.
+ */
+public record GuessRequest(String word) {
 }

@@ -1,12 +1,15 @@
 package edu.rit.backend.game.model;
 
 import jakarta.persistence.*;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Entity
 @Table(name = "games")
 public class Game {
+
+    public static final int DEFAULT_MAX_ATTEMPTS = 6;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,6 +30,21 @@ public class Game {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "word", length = 10)
+    private String word;
+
+    @Column(name = "word_length")
+    private Integer wordLength;
+
+    @Column(name = "max_attempts")
+    private Integer maxAttempts;
+
+    @Column(name = "winner_id")
+    private Long winnerId;
+
+    @Column(name = "ended_at")
+    private Instant endedAt;
 
     public Game() {
     }
@@ -85,6 +103,46 @@ public class Game {
         this.createdAt = createdAt;
     }
 
+    public String getWord() {
+        return word;
+    }
+
+    public void setWord(String word) {
+        this.word = word;
+    }
+
+    public Integer getWordLength() {
+        return wordLength;
+    }
+
+    public void setWordLength(Integer wordLength) {
+        this.wordLength = wordLength;
+    }
+
+    public Integer getMaxAttempts() {
+        return maxAttempts;
+    }
+
+    public void setMaxAttempts(Integer maxAttempts) {
+        this.maxAttempts = maxAttempts;
+    }
+
+    public Long getWinnerId() {
+        return winnerId;
+    }
+
+    public void setWinnerId(Long winnerId) {
+        this.winnerId = winnerId;
+    }
+
+    public Instant getEndedAt() {
+        return endedAt;
+    }
+
+    public void setEndedAt(Instant endedAt) {
+        this.endedAt = endedAt;
+    }
+
     public boolean isWaitingForPlayer() {
         return status == GameStatus.WAITING_FOR_PLAYER;
     }
@@ -97,18 +155,23 @@ public class Game {
         return status == GameStatus.COMPLETED;
     }
 
-    public void startGame(Long playerTwoId) {
+    public void startGame(Long playerTwoId, String secretWord, int maxAttempts, Long firstTurnPlayerId) {
         if (this.status != GameStatus.WAITING_FOR_PLAYER) {
             throw new IllegalStateException("Game cannot be started. Current status: " + this.status);
         }
         this.playerTwoId = playerTwoId;
+        this.word = secretWord != null ? secretWord.toLowerCase() : null;
+        this.wordLength = this.word != null ? this.word.length() : null;
+        this.maxAttempts = maxAttempts;
         this.status = GameStatus.IN_PROGRESS;
-        this.currentTurnPlayerId = this.playerOneId;
+        this.currentTurnPlayerId = firstTurnPlayerId;
     }
 
-    public void endGame() {
+    public void endGame(Long winnerId) {
         this.status = GameStatus.COMPLETED;
         this.currentTurnPlayerId = null;
+        this.winnerId = winnerId;
+        this.endedAt = Instant.now();
     }
 
     @Override
