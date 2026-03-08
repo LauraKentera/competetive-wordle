@@ -1,11 +1,12 @@
 package edu.rit.backend.lobby.service;
 
+import edu.rit.backend.chat.dto.ChatMessageDto;
+import edu.rit.backend.chat.service.ChatService;
 import edu.rit.backend.game.dto.GameDto;
 import edu.rit.backend.game.model.GameStatus;
 import edu.rit.backend.game.repo.GameRepository;
 import edu.rit.backend.game.service.GameService;
 import edu.rit.backend.lobby.dto.ChallengeDto;
-import edu.rit.backend.lobby.dto.LobbyChatMessage;
 import edu.rit.backend.lobby.dto.LobbyPlayerDto;
 import edu.rit.backend.user.model.User;
 import edu.rit.backend.user.model.UserStatus;
@@ -22,15 +23,18 @@ public class LobbyService {
     private final UserRepository userRepository;
     private final GameRepository gameRepository;
     private final GameService gameService;
+    private final ChatService chatService;
     private final SimpMessagingTemplate messagingTemplate;
 
     public LobbyService(UserRepository userRepository,
                         GameRepository gameRepository,
                         GameService gameService,
+                        ChatService chatService,
                         SimpMessagingTemplate messagingTemplate) {
         this.userRepository = userRepository;
         this.gameRepository = gameRepository;
         this.gameService = gameService;
+        this.chatService = chatService;
         this.messagingTemplate = messagingTemplate;
     }
 
@@ -65,7 +69,16 @@ public class LobbyService {
         return game;
     }
 
-    public LobbyChatMessage processChatMessage(LobbyChatMessage message) {
-        return message;
+    /**
+     * Persist lobby message to DB, push to Redis cache, and return DTO for broadcast.
+     */
+    @Transactional
+    public ChatMessageDto sendLobbyChatMessage(Long userId, String username, String content) {
+        return chatService.sendLobbyMessage(userId, username, content);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ChatMessageDto> getRecentLobbyChat(int limit) {
+        return chatService.getRecentLobbyMessages(limit);
     }
 }

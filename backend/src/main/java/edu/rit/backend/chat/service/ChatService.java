@@ -57,6 +57,31 @@ public class ChatService {
         return chatRoomRepository.findByTypeAndGameId(ChatRoomType.GAME, gameId);
     }
 
+    /**
+     * Gets or creates the single global lobby chat room (type LOBBY, gameId null).
+     */
+    @Transactional
+    public ChatRoom getOrCreateLobbyRoom() {
+        return chatRoomRepository.findByType(ChatRoomType.LOBBY)
+                .orElseGet(() -> chatRoomRepository.save(new ChatRoom(ChatRoomType.LOBBY, null)));
+    }
+
+    /**
+     * Send a message to the lobby chat room. Persists to DB and pushes to Redis cache.
+     */
+    @Transactional
+    public ChatMessageDto sendLobbyMessage(Long userId, String username, String content) {
+        ChatRoom room = getOrCreateLobbyRoom();
+        return sendMessage(room.getId(), userId, username, content);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ChatMessageDto> getRecentLobbyMessages(int limit) {
+        ChatRoom room = chatRoomRepository.findByType(ChatRoomType.LOBBY).orElse(null);
+        if (room == null) return List.of();
+        return getRecentMessages(room.getId(), limit);
+    }
+
     @Transactional
     public ChatMessageDto sendMessage(Long chatRoomId, Long userId, String username, String content) {
         if (content == null || content.isBlank()) {

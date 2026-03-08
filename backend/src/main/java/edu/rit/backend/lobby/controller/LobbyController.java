@@ -1,5 +1,6 @@
 package edu.rit.backend.lobby.controller;
 
+import edu.rit.backend.chat.dto.ChatMessageDto;
 import edu.rit.backend.game.dto.GameDto;
 import edu.rit.backend.lobby.dto.ChallengeDto;
 import edu.rit.backend.lobby.dto.LobbyPlayerDto;
@@ -34,6 +35,14 @@ public class LobbyController {
     @GetMapping("/players")
     public List<LobbyPlayerDto> getOnlinePlayers() {
         return lobbyService.getOnlinePlayers();
+    }
+
+    @GetMapping("/chat")
+    public List<ChatMessageDto> getLobbyChat(@RequestParam(defaultValue = "50") int limit, Authentication auth) {
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new IllegalStateException("Not authenticated");
+        }
+        return lobbyService.getRecentLobbyChat(limit);
     }
 
     @GetMapping("/challenges")
