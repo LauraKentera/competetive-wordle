@@ -18,7 +18,7 @@ public class UserController {
     @GetMapping("/api/users/{id}")
     public UserResponse getById(@PathVariable Long id) {
         var user = users.findById(id).orElseThrow(() -> new IllegalArgumentException("User not found"));
-        return new UserResponse(user.getId(), user.getUsername(), user.getRole());
+        return new UserResponse(user.getId(), user.getUsername(), user.getRole(), user.getStatus(), user.getLastLogin());
     }
 
     @GetMapping("/api/me")
@@ -27,6 +27,6 @@ public class UserController {
         var user = users.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        return new UserResponse(user.getId(), user.getUsername(), user.getRole());
+        return new UserResponse(user.getId(), user.getUsername(), user.getRole(), user.getStatus(), user.getLastLogin());
     }
 }

@@ -24,6 +24,13 @@ public class User {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
+    @Column(name = "last_login")
+    private Instant lastLogin;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private UserStatus status = UserStatus.OFFLINE;
+
     protected User() {
         // JPA
     }
@@ -55,11 +62,27 @@ public class User {
         return createdAt;
     }
 
+    public Instant getLastLogin() {
+        return lastLogin;
+    }
+
+    public UserStatus getStatus() {
+        return status;
+    }
+
     public void setPasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
     }
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public void setLastLogin(Instant lastLogin) {
+        this.lastLogin = lastLogin;
+    }
+
+    public void setStatus(UserStatus status) {
+        this.status = status;
     }
 }
