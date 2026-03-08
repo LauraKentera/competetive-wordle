@@ -10,6 +10,34 @@
       "name": "Auth",
       "item": [
         {
+          "name": "Get registration token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.token) { pm.environment.set(\"registrationToken\", json.token); }"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/registration-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "registration-token"]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "login",
           "event": [
             {
@@ -61,7 +89,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"username\": \"marija\",\n    \"password\": \"marija123\"\n}",
+              "raw": "{\n    \"username\": \"marija\",\n    \"password\": \"marija123\",\n    \"registrationToken\": \"{{registrationToken}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -141,6 +169,53 @@
                 "4"
               ]
             }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Game",
+      "item": [
+        {
+          "name": "Create game (challenge)",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+            "method": "POST",
+            "header": [],
+            "body": { "mode": "raw", "raw": "{\n  \"challengedUserId\": 2\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/api/games", "host": ["{{baseUrl}}"], "path": ["api", "games"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Accept game",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/games/1/accept", "host": ["{{baseUrl}}"], "path": ["api", "games", "1", "accept"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Get game state",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/games/1", "host": ["{{baseUrl}}"], "path": ["api", "games", "1"] }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit guess",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+            "method": "POST",
+            "header": [],
+            "body": { "mode": "raw", "raw": "{\n  \"word\": \"crane\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/api/games/1/guess", "host": ["{{baseUrl}}"], "path": ["api", "games", "1", "guess"] }
           },
           "response": []
         }

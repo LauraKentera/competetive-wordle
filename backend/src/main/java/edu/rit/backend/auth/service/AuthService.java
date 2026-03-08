@@ -4,6 +4,7 @@ import edu.rit.backend.auth.dto.AuthResponse;
 import edu.rit.backend.auth.security.JwtService;
 import edu.rit.backend.user.model.Role;
 import edu.rit.backend.user.model.User;
+import edu.rit.backend.user.model.UserStatus;
 import edu.rit.backend.user.repo.UserRepository;
 import edu.rit.backend.user.service.UserService;
 
@@ -12,6 +13,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+
 @Service
 public class AuthService {
 
@@ -19,19 +22,24 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder encoder;
     private final JwtService jwtService;
+    private final RegistrationTokenService registrationTokenService;
 
     public AuthService(UserService userService,
                        UserRepository userRepository,
                        PasswordEncoder encoder,
-                       JwtService jwtService) {
+                       JwtService jwtService,
+                       RegistrationTokenService registrationTokenService) {
         this.userService = userService;
         this.userRepository = userRepository;
         this.encoder = encoder;
         this.jwtService = jwtService;
+        this.registrationTokenService = registrationTokenService;
     }
 
     @Transactional
-    public AuthResponse register(String username, String password) {
+    public AuthResponse register(String username, String password, String registrationToken, String clientIp, String clientUserAgent) {
+        registrationTokenService.validateAndConsume(registrationToken, clientIp, clientUserAgent);
+
         String passwordHash = encoder.encode(password);
         User user = userService.createUser(username, passwordHash, Role.USER);
 
@@ -39,7 +47,7 @@ public class AuthService {
         return new AuthResponse(token, "Bearer", jwtService.getExpirationSeconds(), user.getUsername(), user.getRole());
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthResponse login(String username, String password) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid username or password"));
@@ -47,6 +55,10 @@ public class AuthService {
         if (!encoder.matches(password, user.getPasswordHash())) {
             throw new BadCredentialsException("Invalid username or password");
         }
+
+        user.setLastLogin(Instant.now());
+        user.setStatus(UserStatus.ONLINE);
+        userRepository.save(user);
 
         String token = jwtService.generateAccessToken(user);
         return new AuthResponse(token, "Bearer", jwtService.getExpirationSeconds(), user.getUsername(), user.getRole());

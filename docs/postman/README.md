@@ -42,18 +42,23 @@ mvn spring-boot:run -Dspring-boot.run.profiles=dev
 
 ### 4. Register a User (First Time Only)
 
-Request:
-```
-POST /api/auth/register
-```
+Registration requires a one-time token (nonce) to prevent abuse. Use two requests in order:
 
-Body example:
-```
-{
-  "username": "testuser",
-  "password": "Test123"
-}
-```
+1. **Get registration token**  
+   Request: `GET /api/auth/registration-token`  
+   - Run this first. The response token is saved automatically to the `registrationToken` environment variable.
+
+2. **Register**  
+   Request: `POST /api/auth/register`  
+   Body example:
+   ```
+   {
+     "username": "testuser",
+     "password": "Test123",
+     "registrationToken": "{{registrationToken}}"
+   }
+   ```
+   - Use the same client (Postman) so IP and User-Agent match the token. Run immediately after step 1; tokens expire after 15 minutes.
 
 ---
 
@@ -87,6 +92,7 @@ Authorization: Bearer {{accessToken}}
 ---
 
 ### Security Notes
+- Registration requires a nonce: call `GET /api/auth/registration-token` first, then send that token in `POST /api/auth/register`. The token is bound to the client’s IP and User-Agent.
 - Passwords are hashed using BCrypt on the backend.
 - JWT tokens expire after 1 hour.
 - All secured endpoints require authentication.
