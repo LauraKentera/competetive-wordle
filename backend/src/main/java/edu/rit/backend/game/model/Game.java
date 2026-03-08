@@ -21,6 +21,10 @@ public class Game {
     @Column(name = "player_two_id")
     private Long playerTwoId;
 
+    /** When set, only this user can accept the game (challenge flow). */
+    @Column(name = "invited_player_id")
+    private Long invitedPlayerId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private GameStatus status;
@@ -77,6 +81,14 @@ public class Game {
 
     public void setPlayerTwoId(Long playerTwoId) {
         this.playerTwoId = playerTwoId;
+    }
+
+    public Long getInvitedPlayerId() {
+        return invitedPlayerId;
+    }
+
+    public void setInvitedPlayerId(Long invitedPlayerId) {
+        this.invitedPlayerId = invitedPlayerId;
     }
 
     public GameStatus getStatus() {

@@ -38,6 +38,18 @@ public class GameService {
     }
 
     @Transactional
+    public GameDto createChallenge(Long challengerId, Long invitedPlayerId) {
+        if (challengerId.equals(invitedPlayerId)) {
+            throw new IllegalArgumentException("Cannot challenge yourself");
+        }
+        Game game = new Game(challengerId, GameStatus.WAITING_FOR_PLAYER);
+        game.setCreatedAt(java.time.LocalDateTime.now());
+        game.setInvitedPlayerId(invitedPlayerId);
+        game = gameRepository.save(game);
+        return toDto(game);
+    }
+
+    @Transactional
     public GameDto acceptGame(Long gameId, Long playerTwoId) {
         Game game = gameRepository.findById(gameId)
                 .orElseThrow(() -> new IllegalArgumentException("Game not found"));
@@ -46,6 +58,9 @@ public class GameService {
         }
         if (game.getPlayerOneId().equals(playerTwoId)) {
             throw new IllegalArgumentException("Player two cannot be the same as player one");
+        }
+        if (game.getInvitedPlayerId() != null && !game.getInvitedPlayerId().equals(playerTwoId)) {
+            throw new IllegalArgumentException("Only the invited player can accept this challenge");
         }
 
         String secretWord = wordApiClient.fetchRandomWord();

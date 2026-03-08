@@ -11,4 +11,6 @@ public interface GameRepository extends JpaRepository<Game, Long> {
     List<Game> findByPlayerOneIdOrPlayerTwoId(Long playerOneId, Long playerTwoId);
 
     List<Game> findByStatus(GameStatus status);
+
+    List<Game> findByInvitedPlayerIdAndStatus(Long invitedPlayerId, GameStatus status);
 }
