@@ -19,19 +19,24 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder encoder;
     private final JwtService jwtService;
+    private final RegistrationTokenService registrationTokenService;
 
     public AuthService(UserService userService,
                        UserRepository userRepository,
                        PasswordEncoder encoder,
-                       JwtService jwtService) {
+                       JwtService jwtService,
+                       RegistrationTokenService registrationTokenService) {
         this.userService = userService;
         this.userRepository = userRepository;
         this.encoder = encoder;
         this.jwtService = jwtService;
+        this.registrationTokenService = registrationTokenService;
     }
 
     @Transactional
-    public AuthResponse register(String username, String password) {
+    public AuthResponse register(String username, String password, String registrationToken, String clientIp, String clientUserAgent) {
+        registrationTokenService.validateAndConsume(registrationToken, clientIp, clientUserAgent);
+
         String passwordHash = encoder.encode(password);
         User user = userService.createUser(username, passwordHash, Role.USER);
 
