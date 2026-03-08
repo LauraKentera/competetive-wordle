@@ -136,3 +136,5 @@ Security is **stateless JWT** (OAuth2 resource server). WebSocket connections ar
 1. **Infra:** `cd infra && docker compose up -d` (starts MySQL and Redis)
 2. **Build:** `cd backend && mvn clean compile`
 3. **Run:** `mvn spring-boot:run`
+
+**Tests:** Run `mvn verify` (or `mvn test`) from `backend/`. Tests use H2 and require Redis at `localhost:6379`—start infra first so Redis is available. CI (`.github/workflows/backend-ci.yml`) runs tests with a Redis service container.
