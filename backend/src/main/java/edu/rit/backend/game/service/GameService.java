@@ -1,5 +1,6 @@
 package edu.rit.backend.game.service;
 
+import edu.rit.backend.chat.service.ChatService;
 import edu.rit.backend.game.client.WordApiClient;
 import edu.rit.backend.game.dto.GameDto;
 import edu.rit.backend.game.dto.GuessDto;
@@ -22,11 +23,14 @@ public class GameService {
     private final GameRepository gameRepository;
     private final GuessRepository guessRepository;
     private final WordApiClient wordApiClient;
+    private final ChatService chatService;
 
-    public GameService(GameRepository gameRepository, GuessRepository guessRepository, WordApiClient wordApiClient) {
+    public GameService(GameRepository gameRepository, GuessRepository guessRepository,
+                       WordApiClient wordApiClient, ChatService chatService) {
         this.gameRepository = gameRepository;
         this.guessRepository = guessRepository;
         this.wordApiClient = wordApiClient;
+        this.chatService = chatService;
     }
 
     @Transactional
@@ -74,6 +78,7 @@ public class GameService {
 
         game.startGame(playerTwoId, secretWord, maxAttempts, firstTurnPlayerId);
         game = gameRepository.save(game);
+        chatService.createRoomForGame(game.getId());
         return toDto(game);
     }
 
