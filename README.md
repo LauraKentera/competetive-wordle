@@ -12,7 +12,8 @@ WebSocket (STOMP)
 MySQL
 
 ## Frontend
-React (Create React App)
+React (Create React App, TypeScript)
+React Router v6
 STOMP WebSocket client
 
 ## Infrastructure
@@ -21,18 +22,30 @@ Docker (MySQL containerized for local development)
 ## Project Structure
 
 backend/
-auth/
-user/
-lobby/
-game/
-chat/
-common/
+  src/
+    auth/
+    user/
+    lobby/
+    game/
+    chat/
+    common/
 
 frontend/
+  src/
+    config/
+    types/
+    api/
+    ws/
+    auth/
+    components/
+    features/
+    hooks/
+    routes/
+    styles/
 
 infra/
-docker-compose.yml
-db/
+    docker-compose.yml
+    db/
 
 ## Local Development Setup
 
@@ -79,6 +92,30 @@ Expected response:
 
 {"status":"ok"}
 
+### Start the Frontend
+cd frontend
+npm install
+cp .env.example .env
+npm start
+
+The frontend runs on:
+[http://localhost:3000]
+
+#### Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `REACT_APP_API_BASE_URL` | `http://localhost:8080` | Backend base URL |
+
+## Frontend Routes
+
+| Path | Protected | Description |
+|---|---|---|
+| `/login` | No | Login page |
+| `/register` | No | Register page |
+| `/lobby` | Yes | Online players, challenges, chat |
+| `/games/:gameId` | Yes | Active game board and chat |
+
 ## Security
 
 Spring Security is enabled.
@@ -108,13 +145,16 @@ At least one approval is required before merging into main.
 
 ### Frontend
 
-* Project structure planned
-* CRA will be used for development
+* CRA TypeScript scaffold in place
+* Folder structure established
+* React Router v6 configured
+* Shared UI components built (AppLayout, NavBar, Button, Input, Spinner, ErrorBanner)
+* Environment config set up
 
 ### Next Steps
 
-* Implement User entity and repository
-* Implement JWT authentication
-* Implement WebSocket lobby communication
-* Define initial database schema for core entities
-* Connect frontend login to backend authentication
+* Implement TypeScript DTO types mirroring backend
+* Implement httpClient with Bearer JWT
+* Implement AuthContext, tokenStorage, LoginPage, RegisterPage
+* Implement WebSocket infrastructure (stompClient, useLobbyWebSocket)
+* Implement LobbyPage, GamePage, GameChatPanel
