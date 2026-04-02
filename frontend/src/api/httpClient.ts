@@ -1,5 +1,5 @@
 import ENV from '../config/env';
-import tokenStorage from '../auth/tokenStorage';
+import { getToken } from '../auth/tokenStorage';
 
 export interface ApiError{
     message: string;
@@ -23,7 +23,7 @@ export async function request<T = unknown>(
 ): Promise<T>{
     const url = `${ENV.API_BASE_URL}${path}`;
 
-    const token = tokenStorage.getToken();
+    const token = getToken();
 
     const headers: Record<string, string> = {
         ...(options.headers as Record<string, string> || {}),
