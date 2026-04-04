@@ -32,3 +32,7 @@ export function publish(dest: string, body: object): void {
     body: JSON.stringify(body),
   });
 }
+
+export function onConnect(cb: () => void): void {
+  client.onConnect = () => cb();
+}
