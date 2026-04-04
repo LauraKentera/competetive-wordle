@@ -8,18 +8,16 @@ import {
 
 export const authApi = {
   login: (credentials: LoginRequest): Promise<AuthResponse> =>
-    request("/auth/login", {
+    request("/api/auth/login", {
       method: "POST",
       body: JSON.stringify(credentials),
     }),
 
   getRegistrationToken: (): Promise<RegistrationTokenResponse> =>
-    request("/auth/registration-token", {
-      method: "POST",
-    }),
+    request("/api/auth/registration-token"),
 
   register: (credentials: RegisterRequest): Promise<AuthResponse> =>
-    request("/auth/register", {
+    request("/api/auth/register", {
       method: "POST",
       body: JSON.stringify(credentials),
     }),
