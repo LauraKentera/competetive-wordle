@@ -1,5 +1,5 @@
 import { request } from "./httpClient";
-import { LobbyPlayerDto, ChatMessageDto, ChallengeDto } from "../types/api";
+import { LobbyPlayerDto, ChatMessageDto, ChallengeDto, GameDto } from "../types/api";
 
 export const lobbyApi = {
   getPlayers: (): Promise<LobbyPlayerDto[]> =>
@@ -10,4 +10,9 @@ export const lobbyApi = {
 
   getChallenges: (): Promise<ChallengeDto[]> =>
     request("/api/lobby/challenges"),
+
+  challengeUser: (userId: number): Promise<GameDto> =>
+    request(`/api/lobby/challenge/${userId}`, {
+      method: "POST",
+    }),
 };
