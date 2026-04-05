@@ -28,46 +28,49 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div style={{ maxWidth: 360, margin: "48px auto", display: "grid", gap: "var(--spacing-md)" }}>
-      <h1 style={{ margin: 0, fontSize: 24 }}>Login</h1>
+    <div className="auth-page">
+      <div className="auth-card auth-card-login">
+        <h1 className="auth-brand-title">
+          Competitive{" "}
+          <span className="wordle-title">
+            <span className="wordle-w">W</span>
+            <span className="wordle-o">O</span>
+            <span className="wordle-r">R</span>
+            <span className="wordle-d">D</span>
+            <span className="wordle-l">L</span>
+            <span className="wordle-e">E</span>
+          </span>
+        </h1>
+        <h2 className="auth-page-title">Login</h2>
+        <p className="auth-subtitle">Welcome back! Log in to continue playing.</p>
 
-      {successMessage && (
-        <div
-          style={{
-            background: "var(--color-surface)",
-            color: "var(--color-text)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "var(--radius)",
-            padding: "var(--spacing-sm) var(--spacing-md)",
-            fontSize: 14,
-          }}
-        >
-          {successMessage}
-        </div>
-      )}
-      {errorMessage && <ErrorBanner message={errorMessage} />}
+        {successMessage && <div className="auth-info-banner">{successMessage}</div>}
+        {errorMessage && <ErrorBanner message={errorMessage} />}
 
-      <form onSubmit={handleSubmit} style={{ display: "grid", gap: "var(--spacing-sm)" }}>
-        <Input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-          required
-        />
-        <Input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          required
-        />
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? "Logging in..." : "Login"}
-        </Button>
-      </form>
+        <form onSubmit={handleSubmit} className="auth-form">
+          <Input
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            required
+          />
+          <Input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+          />
+          <Button type="submit" disabled={isLoading} className="auth-submit-button">
+            {isLoading ? "Logging in..." : "Login"}
+          </Button>
+        </form>
 
-      <Link to="/register">Need an account? Register</Link>
+        <Link to="/register" className="auth-link">
+          Need an account? Register
+        </Link>
+      </div>
     </div>
   );
 };

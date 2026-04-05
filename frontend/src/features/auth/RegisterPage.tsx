@@ -28,32 +28,48 @@ const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div style={{ maxWidth: 360, margin: "48px auto", display: "grid", gap: "var(--spacing-md)" }}>
-      <h1 style={{ margin: 0, fontSize: 24 }}>Register</h1>
+    <div className="auth-page">
+      <div className="auth-card auth-card-register">
+        <h1 className="auth-brand-title">
+          Competitive{" "}
+          <span className="wordle-title">
+            <span className="wordle-w">W</span>
+            <span className="wordle-o">O</span>
+            <span className="wordle-r">R</span>
+            <span className="wordle-d">D</span>
+            <span className="wordle-l">L</span>
+            <span className="wordle-e">E</span>
+          </span>
+        </h1>
+        <h2 className="auth-page-title">Register</h2>
+        <p className="auth-subtitle">Create an account and start playing now!</p>
 
-      {errorMessage && <ErrorBanner message={errorMessage} />}
+        {errorMessage && <ErrorBanner message={errorMessage} />}
 
-      <form onSubmit={handleSubmit} style={{ display: "grid", gap: "var(--spacing-sm)" }}>
-        <Input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-          required
-        />
-        <Input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          required
-        />
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? "Registering..." : "Register"}
-        </Button>
-      </form>
+        <form onSubmit={handleSubmit} className="auth-form">
+          <Input
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            required
+          />
+          <Input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+          />
+          <Button type="submit" disabled={isLoading} className="auth-submit-button">
+            {isLoading ? "Registering..." : "Register"}
+          </Button>
+        </form>
 
-      <Link to="/login">Already have an account? Login</Link>
+        <Link to="/login" className="auth-link">
+          Already have an account? Login
+        </Link>
+      </div>
     </div>
   );
 };
