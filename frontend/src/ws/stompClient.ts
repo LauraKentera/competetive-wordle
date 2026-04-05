@@ -9,6 +9,10 @@ const client = new Client({
     console.error("STOMP error:", frame);
   },
 });
+const connectCallbacks = new Set<() => void>();
+client.onConnect = () => {
+  connectCallbacks.forEach((cb) => cb());
+};
 
 export function connect(token: string): void {
   client.connectHeaders = { Authorization: "Bearer " + token };
@@ -34,5 +38,13 @@ export function publish(dest: string, body: object): void {
 }
 
 export function onConnect(cb: () => void): void {
-  client.onConnect = () => cb();
+  connectCallbacks.add(cb);
+}
+
+export function offConnect(cb: () => void): void {
+  connectCallbacks.delete(cb);
+}
+
+export function isConnected(): boolean {
+  return client.connected;
 }
