@@ -5,6 +5,7 @@ import ProtectedRoute from "../auth/ProtectedRoute";
 import LoginPage from "../features/auth/LoginPage";
 import RegisterPage from "../features/auth/RegisterPage";
 import LobbyPage from "../features/lobby/LobbyPage";
+import GamePage from "../features/game/GamePage";
 
 const routes = (
   <Routes>
@@ -13,7 +14,7 @@ const routes = (
     <Route element={<ProtectedRoute />}>
       <Route element={<AppLayout />}>
         <Route path="/lobby" element={<LobbyPage />} />
-        <Route path="/games/:gameId" element={<div>Game</div>} />
+        <Route path="/games/:gameId" element={<GamePage />} />
       </Route>
     </Route>
   </Routes>
