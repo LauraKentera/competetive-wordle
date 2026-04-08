@@ -9,6 +9,7 @@ import Spinner from "../../components/ui/Spinner";
 import useGamePolling from "../../hooks/useGamePolling";
 import { GameDto, GuessDto, GuessResult } from "../../types/api";
 import GuessInput from "./GuessInput";
+import GameChatPanel from "./GameChatPanel";
 import WordleBoard from "./WordleBoard";
 
 type GamePageGame = Omit<GameDto, "playerTwoId" | "currentTurnPlayerId" | "winnerId"> & {
@@ -206,6 +207,8 @@ const GamePage: React.FC = () => {
             onGuessSubmitted={handleGuessSubmitted}
           />
         )}
+
+        {game && <GameChatPanel gameId={game.id.toString()} />}
       </section>
     </div>
   );
