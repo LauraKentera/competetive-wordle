@@ -1,18 +1,11 @@
 import React from "react";
 
-interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {}
+interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: "primary" | "ghost" | "danger" | "amber";
+}
 
-const Button: React.FC<Props> = ({ children, ...props }) => (
-  <button style={{
-    padding: "8px 16px",
-    background: "var(--color-primary)",
-    color: "#fff",
-    border: "none",
-    borderRadius: "var(--radius)",
-    fontSize: 14,
-    cursor: "pointer",
-    opacity: props.disabled ? 0.6 : 1,
-  }} {...props}>
+const Button: React.FC<Props> = ({ variant = "primary", className = "", children, ...props }) => (
+  <button className={`btn btn-${variant} ${className}`} {...props}>
     {children}
   </button>
 );

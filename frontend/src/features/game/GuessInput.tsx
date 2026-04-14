@@ -1,9 +1,6 @@
 import React, { useState } from "react";
 import { gameApi } from "../../api/gameApi";
 import { isApiError } from "../../api/httpClient";
-import Button from "../../components/ui/Button";
-import ErrorBanner from "../../components/ui/ErrorBanner";
-import Input from "../../components/ui/Input";
 import { GuessDto, GuessResult } from "../../types/api";
 
 interface Props {
@@ -15,50 +12,28 @@ interface Props {
   onGuessSubmitted: (guess: GuessDto, result: GuessResult) => void | Promise<void>;
 }
 
-const WORD_LENGTH = 5;
-
 const GuessInput: React.FC<Props> = ({
-  gameId,
-  currentUserId,
-  nextAttemptNumber,
-  disabled = false,
-  disabledMessage = null,
-  onGuessSubmitted,
+  gameId, currentUserId, nextAttemptNumber,
+  disabled = false, disabledMessage = null, onGuessSubmitted,
 }) => {
   const [word, setWord] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setErrorMessage(null);
-
-    const normalizedWord = word.trim().toLowerCase();
-    if (normalizedWord.length !== WORD_LENGTH) {
-      setErrorMessage("Guess must be 5 letters.");
-      return;
-    }
-
+    const w = word.trim().toLowerCase();
+    if (w.length !== 5) { setErrorMessage("Guess must be exactly 5 letters."); return; }
     setIsSubmitting(true);
-
     try {
-      const result = await gameApi.submitGuess(gameId, normalizedWord);
-
+      const result = await gameApi.submitGuess(gameId, w);
       await onGuessSubmitted(
-        {
-          playerId: currentUserId,
-          guessWord: normalizedWord,
-          result: result.result,
-          attemptNumber: nextAttemptNumber,
-        },
+        { playerId: currentUserId, guessWord: w, result: result.result, attemptNumber: nextAttemptNumber },
         result
       );
-
       setWord("");
-
-      if (!result.correct) {
-        setErrorMessage("Incorrect guess. Your result has been added to the board.");
-      }
+      if (!result.correct) setErrorMessage("incorrect — try again");
     } catch (err) {
       setErrorMessage(isApiError(err) ? err.message : "Failed to submit guess");
     } finally {
@@ -67,30 +42,27 @@ const GuessInput: React.FC<Props> = ({
   };
 
   return (
-    <div style={{ display: "grid", gap: "var(--spacing-sm)" }}>
-      {errorMessage && <ErrorBanner message={errorMessage} />}
-
-      <form onSubmit={handleSubmit} style={{ display: "grid", gap: "var(--spacing-sm)" }}>
-        <Input
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {errorMessage && <div className="banner-error">{errorMessage}</div>}
+      <form onSubmit={handleSubmit} className="guess-row">
+        <input
+          className="input"
           value={word}
-          onChange={(event) => {
-            setWord(event.target.value.replace(/[^a-zA-Z]/g, "").slice(0, WORD_LENGTH).toUpperCase());
-            if (errorMessage) {
-              setErrorMessage(null);
-            }
+          onChange={(e) => {
+            setWord(e.target.value.replace(/[^a-zA-Z]/g, "").slice(0, 5).toUpperCase());
+            if (errorMessage) setErrorMessage(null);
           }}
-          placeholder="Enter a 5-letter word"
-          maxLength={WORD_LENGTH}
+          placeholder="5-letter word"
+          maxLength={5}
           disabled={disabled || isSubmitting}
-          aria-label="Guess word"
+          style={{ fontFamily: "var(--font-mono)", letterSpacing: "0.15em", textTransform: "uppercase" }}
         />
-        <Button type="submit" disabled={disabled || isSubmitting}>
-          {isSubmitting ? "Submitting..." : "Submit"}
-        </Button>
+        <button className="btn btn-primary" type="submit" disabled={disabled || isSubmitting} style={{ whiteSpace: "nowrap" }}>
+          {isSubmitting ? "..." : "submit"}
+        </button>
       </form>
-
       {disabledMessage && (
-        <p style={{ margin: 0, color: "var(--color-text-muted)", fontSize: 14 }}>{disabledMessage}</p>
+        <div className="turn-indicator">{disabledMessage}</div>
       )}
     </div>
   );

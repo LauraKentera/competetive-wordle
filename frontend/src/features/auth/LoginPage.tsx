@@ -1,9 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth";
-import Input from "../../components/ui/Input";
-import Button from "../../components/ui/Button";
-import ErrorBanner from "../../components/ui/ErrorBanner";
 import { isApiError } from "../../api/httpClient";
 
 const LoginPage: React.FC = () => {
@@ -15,10 +12,9 @@ const LoginPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const successMessage = (location.state as { message?: string } | null)?.message ?? null;
 
-  const handleSubmit = async (event: React.SyntheticEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setErrorMessage(null);
-
     try {
       await login({ username, password });
       navigate("/lobby");
@@ -28,47 +24,50 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-card auth-card-login">
-        <h1 className="auth-brand-title">
-          Competitive{" "}
-          <span className="wordle-title">
-            <span className="wordle-w">W</span>
-            <span className="wordle-o">O</span>
-            <span className="wordle-r">R</span>
-            <span className="wordle-d">D</span>
-            <span className="wordle-l">L</span>
-            <span className="wordle-e">E</span>
+    <div className="auth-shell">
+      <div className="auth-card fade-in">
+        <div className="auth-wordmark">
+          <span className="auth-wordmark-label">competitive</span>
+          <span className="auth-wordmark-title">
+            <span className="letter-correct">W</span>
+            <span className="letter-present">O</span>
+            <span className="letter-absent">R</span>
+            <span className="letter-correct">D</span>
+            <span className="letter-present">L</span>
+            <span className="letter-absent">E</span>
           </span>
-        </h1>
-        <h2 className="auth-page-title">Login</h2>
-        <p className="auth-subtitle">Welcome back! Log in to continue playing.</p>
+        </div>
 
-        {successMessage && <div className="auth-info-banner">{successMessage}</div>}
-        {errorMessage && <ErrorBanner message={errorMessage} />}
+        <div className="auth-heading">sign in</div>
+
+        {successMessage && <div className="banner-info">{successMessage}</div>}
+        {errorMessage && <div className="banner-error">{errorMessage}</div>}
 
         <form onSubmit={handleSubmit} className="auth-form">
-          <Input
+          <input
+            className="input"
             type="text"
-            placeholder="Username"
+            placeholder="username"
             value={username}
-            onChange={(event) => setUsername(event.target.value)}
+            onChange={(e) => setUsername(e.target.value)}
             required
+            autoFocus
           />
-          <Input
+          <input
+            className="input"
             type="password"
-            placeholder="Password"
+            placeholder="password"
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={(e) => setPassword(e.target.value)}
             required
           />
-          <Button type="submit" disabled={isLoading} className="auth-submit-button">
-            {isLoading ? "Logging in..." : "Login"}
-          </Button>
+          <button className="btn btn-primary" type="submit" disabled={isLoading} style={{ marginTop: 4 }}>
+            {isLoading ? "signing in..." : "sign in →"}
+          </button>
         </form>
 
         <Link to="/register" className="auth-link">
-          Need an account? Register
+          no account? register here
         </Link>
       </div>
     </div>

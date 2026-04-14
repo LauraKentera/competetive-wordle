@@ -12,7 +12,5 @@ export const lobbyApi = {
     request("/api/lobby/challenges"),
 
   challengeUser: (userId: number): Promise<GameDto> =>
-    request(`/api/lobby/challenge/${userId}`, {
-      method: "POST",
-    }),
+    request(`/api/lobby/challenge/${userId}`, { method: "POST" }),
 };

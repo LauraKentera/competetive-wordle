@@ -24,4 +24,12 @@ export const gameApi = {
 
   getGameChat: (id: number, limit?: number): Promise<ChatMessageDto[]> =>
     request(`/api/games/${id}/chat${limit !== undefined ? `?limit=${limit}` : ""}`),
+
+  declineGame: (id: number): Promise<GameDto> =>
+    request(`/api/games/${id}/decline`, {
+      method: "POST",
+    }),
+    
+  forfeitGame: (id: number): Promise<GameDto> =>
+    request(`/api/games/${id}/forfeit`, { method: "POST" }),
 };

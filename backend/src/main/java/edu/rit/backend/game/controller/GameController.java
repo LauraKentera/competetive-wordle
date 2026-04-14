@@ -9,10 +9,14 @@ import edu.rit.backend.game.model.Game;
 import edu.rit.backend.game.repo.GameRepository;
 import edu.rit.backend.game.service.GameService;
 import edu.rit.backend.user.repo.UserRepository;
+import org.springframework.messaging.handler.annotation.DestinationVariable;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
+import java.security.Principal;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/games")
@@ -22,13 +26,15 @@ public class GameController {
     private final UserRepository userRepository;
     private final GameRepository gameRepository;
     private final ChatService chatService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     public GameController(GameService gameService, UserRepository userRepository,
-                          GameRepository gameRepository, ChatService chatService) {
+            GameRepository gameRepository, ChatService chatService, SimpMessagingTemplate messagingTemplate) {
         this.gameService = gameService;
         this.userRepository = userRepository;
         this.gameRepository = gameRepository;
         this.chatService = chatService;
+        this.messagingTemplate = messagingTemplate;
     }
 
     private Long currentUserId(Authentication auth) {
@@ -64,10 +70,22 @@ public class GameController {
         return gameService.submitGuess(id, playerId, word);
     }
 
+    @PostMapping("/{id}/decline")
+    public GameDto declineGame(@PathVariable Long id, Authentication auth) {
+        Long playerTwoId = currentUserId(auth);
+        return gameService.declineGame(id, playerTwoId);
+    }
+
+    @PostMapping("/{id}/forfeit")
+    public GameDto forfeitGame(@PathVariable Long id, Authentication auth) {
+        Long playerId = currentUserId(auth);
+        return gameService.forfeitGame(id, playerId);
+    }
+
     @GetMapping("/{id}/chat")
     public List<ChatMessageDto> getGameChat(@PathVariable Long id,
-                                            @RequestParam(defaultValue = "50") int limit,
-                                            Authentication auth) {
+            @RequestParam(defaultValue = "50") int limit,
+            Authentication auth) {
         Long userId = currentUserId(auth);
         Game game = gameRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Game not found"));
@@ -75,5 +93,15 @@ public class GameController {
             throw new IllegalArgumentException("Only players in this game can view chat");
         }
         return chatService.getRecentGameMessages(id, limit);
+    }
+
+    @MessageMapping("/game/{gameId}/leave")
+    public void playerLeft(@DestinationVariable Long gameId, Principal principal) {
+        Long userId = userRepository.findByUsername(principal.getName())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"))
+                .getId();
+        messagingTemplate.convertAndSend(
+                "/topic/game/" + gameId + "/presence",
+                Map.of("userId", userId, "status", "LEFT"));
     }
 }

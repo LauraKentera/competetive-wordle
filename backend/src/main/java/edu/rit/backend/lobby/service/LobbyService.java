@@ -27,10 +27,10 @@ public class LobbyService {
     private final SimpMessagingTemplate messagingTemplate;
 
     public LobbyService(UserRepository userRepository,
-                        GameRepository gameRepository,
-                        GameService gameService,
-                        ChatService chatService,
-                        SimpMessagingTemplate messagingTemplate) {
+            GameRepository gameRepository,
+            GameService gameService,
+            ChatService chatService,
+            SimpMessagingTemplate messagingTemplate) {
         this.userRepository = userRepository;
         this.gameRepository = gameRepository;
         this.gameService = gameService;
@@ -70,7 +70,8 @@ public class LobbyService {
     }
 
     /**
-     * Persist lobby message to DB, push to Redis cache, and return DTO for broadcast.
+     * Persist lobby message to DB, push to Redis cache, and return DTO for
+     * broadcast.
      */
     @Transactional
     public ChatMessageDto sendLobbyChatMessage(Long userId, String username, String content) {

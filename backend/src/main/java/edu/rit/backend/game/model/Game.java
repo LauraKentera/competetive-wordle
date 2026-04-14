@@ -1,7 +1,6 @@
 package edu.rit.backend.game.model;
 
 import jakarta.persistence.*;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
@@ -48,7 +47,18 @@ public class Game {
     private Long winnerId;
 
     @Column(name = "ended_at")
-    private Instant endedAt;
+    private LocalDateTime endedAt;
+
+    @Column(name = "started_at")
+    private LocalDateTime startedAt;
+
+    public LocalDateTime getStartedAt() {
+        return startedAt;
+    }
+
+    public void setStartedAt(LocalDateTime startedAt) {
+        this.startedAt = startedAt;
+    }
 
     public Game() {
     }
@@ -147,11 +157,11 @@ public class Game {
         this.winnerId = winnerId;
     }
 
-    public Instant getEndedAt() {
+    public LocalDateTime getEndedAt() {
         return endedAt;
     }
 
-    public void setEndedAt(Instant endedAt) {
+    public void setEndedAt(LocalDateTime endedAt) {
         this.endedAt = endedAt;
     }
 
@@ -177,13 +187,14 @@ public class Game {
         this.maxAttempts = maxAttempts;
         this.status = GameStatus.IN_PROGRESS;
         this.currentTurnPlayerId = firstTurnPlayerId;
+        this.startedAt = LocalDateTime.now();
     }
 
     public void endGame(Long winnerId) {
         this.status = GameStatus.COMPLETED;
         this.currentTurnPlayerId = null;
         this.winnerId = winnerId;
-        this.endedAt = Instant.now();
+        this.endedAt = LocalDateTime.now();
     }
 
     @Override

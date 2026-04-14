@@ -1,98 +1,66 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ChatMessageDto } from "../../types/api";
-import { useLobbyWebSocket } from "../../hooks/useLobbyWebSocket";
-import Input from "../../components/ui/Input";
-import Button from "../../components/ui/Button";
 import { useAuth } from "../../auth";
 
 interface Props {
   initialMessages: ChatMessageDto[];
+  sendLobbyChat: (content: string) => void;
 }
 
-const LobbyChatPanel: React.FC<Props> = ({ initialMessages }) => {
+const LobbyChatPanel: React.FC<Props> = ({ initialMessages, sendLobbyChat }) => {
   const { user } = useAuth();
-  const [messages, setMessages] = useState<ChatMessageDto[]>(initialMessages);
   const [content, setContent] = useState("");
-  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    setMessages(initialMessages);
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [initialMessages]);
-
-  const { sendLobbyChat } = useLobbyWebSocket({
-    onLobbyChatMessage: (message) => {
-      setMessages((prev) => [...prev, message]);
-    },
-  });
-
-  useEffect(() => {
-    const container = messagesContainerRef.current;
-    if (!container) {
-      return;
-    }
-    container.scrollTop = container.scrollHeight;
-  }, [messages]);
 
   const handleSend = () => {
     const trimmed = content.trim();
-    if (!trimmed) {
-      return;
-    }
+    if (!trimmed) return;
+
     sendLobbyChat(trimmed);
     setContent("");
   };
 
+  const fmt = (ts: string) =>
+    new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
   return (
-    <section
-      style={{
-        border: "1px solid var(--color-border)",
-        borderRadius: "var(--radius)",
-        background: "#f2f8ff",
-        padding: "var(--spacing-md)",
-        display: "grid",
-        gap: "var(--spacing-sm)",
-      }}
-    >
-      <h2 style={{ margin: 0, fontSize: 18 }}>Lobby Chat</h2>
-
-      <div
-        ref={messagesContainerRef}
-        style={{
-          border: "1px solid var(--color-border)",
-          borderRadius: "var(--radius)",
-          padding: "var(--spacing-sm)",
-          minHeight: 240,
-          maxHeight: 320,
-          overflowY: "auto",
-          display: "grid",
-          gap: "6px",
-          alignContent: "start",
-        }}
-      >
-        {messages.length === 0 && (
-          <p style={{ margin: 0, color: "var(--color-text-muted)" }}>No messages yet.</p>
-        )}
-
-        {messages.map((message, index) => (
-          <p key={`${message.timestamp}-${index}`} style={{ margin: 0 }}>
-            <strong style={{ color: message.sender === user?.username ? "#ca8a04" : "inherit" }}>
-              {message.sender}
-              {message.sender === user?.username ? " (You)" : ""}:
-            </strong>{" "}
-            {message.content}
-          </p>
-        ))}
+    <div className="lobby-panel">
+      <div className="panel-header"><span>lobby chat</span></div>
+      <div className="chat-messages">
+        {initialMessages.length === 0 && <div className="panel-empty">no messages yet</div>}
+        {initialMessages.map((m, i) => {
+          const mine = m.sender === user?.username;
+          return (
+            <div key={`${m.timestamp}-${i}`} className={`chat-msg ${mine ? "chat-msg-mine" : "chat-msg-other"} fade-in`}>
+              <div className="chat-msg-header">
+                <span className={`chat-msg-sender ${mine ? "chat-msg-sender-mine" : "chat-msg-sender-other"}`}>
+                  {m.sender}
+                </span>
+                <span className="chat-msg-time">{fmt(m.timestamp)}</span>
+              </div>
+              <div className="chat-msg-content">{m.content}</div>
+            </div>
+          );
+        })}
+        <div ref={bottomRef} />
       </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "var(--spacing-sm)" }}>
-        <Input
+      <div className="chat-input-row">
+        <input
+          className="input"
           value={content}
-          onChange={(event) => setContent(event.target.value)}
-          placeholder="Type a message"
+          onChange={(e) => setContent(e.target.value)}
+          placeholder="message..."
+          onKeyDown={(e) => { if (e.key === "Enter") handleSend(); }}
         />
-        <Button onClick={handleSend}>Send</Button>
+        <button className="btn btn-primary" onClick={handleSend}>
+          send
+        </button>
       </div>
-    </section>
+    </div>
   );
 };
 

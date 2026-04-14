@@ -30,3 +30,15 @@ ALTER TABLE games ADD CONSTRAINT check_current_turn_valid
     CHECK (current_turn_player_id IS NULL OR 
            current_turn_player_id = player_one_id OR 
            current_turn_player_id = player_two_id);
+
+-- 1. Add the missing columns
+ALTER TABLE games ADD COLUMN IF NOT EXISTS invited_player_id BIGINT;
+ALTER TABLE games ADD COLUMN IF NOT EXISTS word VARCHAR(10);
+ALTER TABLE games ADD COLUMN IF NOT EXISTS word_length INTEGER;
+ALTER TABLE games ADD COLUMN IF NOT EXISTS max_attempts INTEGER;
+ALTER TABLE games ADD COLUMN IF NOT EXISTS winner_id BIGINT;
+ALTER TABLE games ADD COLUMN IF NOT EXISTS ended_at TIMESTAMP;
+ALTER TABLE games ADD COLUMN started_at DATETIME;
+
+-- 2. Update existing status index (Optional, but good for performance)
+CREATE INDEX IF NOT EXISTS idx_games_invited_player_id ON games(invited_player_id);

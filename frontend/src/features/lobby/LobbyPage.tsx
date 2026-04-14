@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { isApiError } from "../../api/httpClient";
 import { lobbyApi } from "../../api/lobbyApi";
+import { useLobbyWebSocket } from "../../hooks/useLobbyWebSocket";
 import { ChallengeDto, ChatMessageDto, LobbyPlayerDto } from "../../types/api";
 import Spinner from "../../components/ui/Spinner";
-import ErrorBanner from "../../components/ui/ErrorBanner";
 import OnlinePlayersPanel from "./OnlinePlayersPanel";
 import ChallengesPanel from "./ChallengesPanel";
 import LobbyChatPanel from "./LobbyChatPanel";
@@ -16,54 +16,59 @@ const LobbyPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadLobbyData = async () => {
+    const load = async () => {
       setIsLoading(true);
-      setErrorMessage(null);
-
       try {
-        const [playersData, challengesData, chatData] = await Promise.all([
+        const [p, c, ch] = await Promise.all([
           lobbyApi.getPlayers(),
           lobbyApi.getChallenges(),
-          lobbyApi.getChatHistory(),
+          lobbyApi.getChatHistory(50),
         ]);
-
-        setPlayers(playersData);
-        setChallenges(challengesData);
-        setChatHistory(chatData);
+        setPlayers(p);
+        setChallenges(c);
+        setChatHistory(ch);
       } catch (err) {
         setErrorMessage(isApiError(err) ? err.message : "Failed to load lobby");
       } finally {
         setIsLoading(false);
       }
     };
-
-    loadLobbyData();
+    load();
   }, []);
 
-  if (isLoading) {
-    return (
-      <div style={{ display: "flex", justifyContent: "center", paddingTop: 40 }}>
-        <Spinner />
-      </div>
-    );
-  }
+  useEffect(() => {
+    const interval = window.setInterval(async () => {
+      try {
+        const c = await lobbyApi.getChallenges();
+        setChallenges(c);
+      } catch {}
+    }, 3000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const { sendLobbyChat } = useLobbyWebSocket({
+    onPlayersUpdate: (updated) => setPlayers(updated),
+    onLobbyChatMessage: (msg) => setChatHistory((prev) => [...prev, msg]),
+    onChallengeReceived: (challenge) => {
+      setChallenges((prev) => {
+        if (prev.find((c) => c.gameId === challenge.gameId)) return prev;
+        return [...prev, challenge];
+      });
+    },
+  });
+
+  if (isLoading) return <Spinner />;
 
   return (
-    <div style={{ display: "grid", gap: "var(--spacing-md)" }}>
-      {errorMessage && <ErrorBanner message={errorMessage} />}
-
-      <div
-        style={{
-          display: "grid",
-          gap: "var(--spacing-md)",
-          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-          alignItems: "start",
-        }}
-      >
-        <OnlinePlayersPanel players={players} />
-        <ChallengesPanel challenges={challenges} />
-        <LobbyChatPanel initialMessages={chatHistory} />
-      </div>
+    <div className="lobby-shell">
+      {errorMessage && (
+        <div style={{ gridColumn: "1/-1", padding: 12 }}>
+          <div className="banner-error">{errorMessage}</div>
+        </div>
+      )}
+      <OnlinePlayersPanel players={players} />
+      <ChallengesPanel challenges={challenges} />
+      <LobbyChatPanel initialMessages={chatHistory} sendLobbyChat={sendLobbyChat} />
     </div>
   );
 };

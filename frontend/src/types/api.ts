@@ -96,12 +96,13 @@ export interface GameDto {
   id: number;
   status: string;
   playerOneId: number;
-  playerTwoId: number;
-  currentTurnPlayerId: number;
-  wordLength: number;
-  maxAttempts: number;
-  winnerId: number;
+  playerTwoId: number | null;
+  currentTurnPlayerId: number | null;
+  wordLength: number | null;
+  maxAttempts: number | null;
+  winnerId: number | null;
   guesses: GuessDto[];
+  answer: string | null;
 }
 
 export interface GuessDto {
