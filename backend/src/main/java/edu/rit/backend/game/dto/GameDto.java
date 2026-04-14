@@ -14,5 +14,6 @@ public record GameDto(
         Integer wordLength,
         Integer maxAttempts,
         Long winnerId,
-        List<GuessDto> guesses
+        List<GuessDto> guesses,
+        String answer
 ) {}

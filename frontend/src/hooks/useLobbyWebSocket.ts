@@ -1,70 +1,52 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { IMessage } from "@stomp/stompjs";
 import { useAuth } from "../auth/AuthContext";
-import {
-  connect,
-  disconnect,
-  subscribe,
-  publish,
-  onConnect,
-  offConnect,
-  isConnected,
-} from "../ws/stompClient";
-import { LobbyPlayerDto, ChatMessageDto } from "../types/api";
+import { connect, subscribe, publish, onConnect, offConnect } from "../ws/stompClient";
+import { LobbyPlayerDto, ChatMessageDto, ChallengeDto } from "../types/api";
 
 interface UseLobbyWebSocketCallbacks {
   onPlayersUpdate?: (players: LobbyPlayerDto[]) => void;
   onLobbyChatMessage?: (message: ChatMessageDto) => void;
+  onChallengeReceived?: (challenge: ChallengeDto) => void;
 }
 
 export function useLobbyWebSocket(callbacks: UseLobbyWebSocketCallbacks) {
   const { token } = useAuth();
-  const playersUpdateRef = useRef(callbacks.onPlayersUpdate);
-  const lobbyChatMessageRef = useRef(callbacks.onLobbyChatMessage);
-
-  useEffect(() => {
-    playersUpdateRef.current = callbacks.onPlayersUpdate;
-    lobbyChatMessageRef.current = callbacks.onLobbyChatMessage;
-  }, [callbacks]);
 
   useEffect(() => {
     if (!token) return;
 
     const subscriptions: { unsubscribe: () => void }[] = [];
-    let didSubscribe = false;
 
-    const subscribeChannels = () => {
-      if (didSubscribe) {
-        return;
-      }
-      didSubscribe = true;
+    const doSub = () => {
+      subscriptions.forEach(s => s.unsubscribe());
+      subscriptions.length = 0;
 
       const playersSub = subscribe("/topic/lobby/players", (msg: IMessage) => {
-        if (playersUpdateRef.current) {
-          playersUpdateRef.current(JSON.parse(msg.body) as LobbyPlayerDto[]);
-        }
+        if (callbacks.onPlayersUpdate)
+          callbacks.onPlayersUpdate(JSON.parse(msg.body) as LobbyPlayerDto[]);
       });
-
       const chatSub = subscribe("/topic/lobby/chat", (msg: IMessage) => {
-        if (lobbyChatMessageRef.current) {
-          lobbyChatMessageRef.current(JSON.parse(msg.body) as ChatMessageDto);
-        }
+        if (callbacks.onLobbyChatMessage)
+          callbacks.onLobbyChatMessage(JSON.parse(msg.body) as ChatMessageDto);
+      });
+      const challengeSub = subscribe("/user/queue/challenges", (msg: IMessage) => {
+        if (callbacks.onChallengeReceived)
+          callbacks.onChallengeReceived(JSON.parse(msg.body) as ChallengeDto);
       });
 
-      subscriptions.push(playersSub, chatSub);
+      if (playersSub) subscriptions.push(playersSub);
+      if (chatSub) subscriptions.push(chatSub);
+      if (challengeSub) subscriptions.push(challengeSub);
     };
 
-    onConnect(subscribeChannels);
-
+    onConnect(doSub);
     connect(token);
-    if (isConnected()) {
-      subscribeChannels();
-    }
 
     return () => {
-      offConnect(subscribeChannels);
-      subscriptions.forEach((s) => s.unsubscribe());
-      disconnect();
+      offConnect(doSub);
+      subscriptions.forEach(s => s.unsubscribe());
+      subscriptions.length = 0;
     };
   }, [token]);
 

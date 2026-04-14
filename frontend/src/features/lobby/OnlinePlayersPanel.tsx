@@ -1,120 +1,90 @@
-import React, { useEffect, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { lobbyApi } from "../../api/lobbyApi";
 import { isApiError } from "../../api/httpClient";
-import { useLobbyWebSocket } from "../../hooks/useLobbyWebSocket";
 import { LobbyPlayerDto } from "../../types/api";
-import Button from "../../components/ui/Button";
-import ErrorBanner from "../../components/ui/ErrorBanner";
 import { useAuth } from "../../auth";
 
-interface Props {
-  players: LobbyPlayerDto[];
-}
+interface Props { players: LobbyPlayerDto[]; }
 
 const OnlinePlayersPanel: React.FC<Props> = ({ players }) => {
-  const navigate = useNavigate();
   const { user } = useAuth();
-  const [playerList, setPlayerList] = useState<LobbyPlayerDto[]>(players);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [challenging, setChallenging] = useState<number | null>(null);
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    setPlayerList(players);
-  }, [players]);
+  const displayList = useMemo(() => {
+    let list = [...players];
 
-  useLobbyWebSocket({
-    onPlayersUpdate: (updatedPlayers) => {
-      setPlayerList(updatedPlayers);
-    },
-  });
+    const isMeInList = user && list.some((p) => p.id === user.id);
+    if (!isMeInList && user) {
+      list.push({
+        id: user.id,
+        username: user.username,
+        status: "ONLINE" as any,
+      });
+    }
 
-  const handleChallenge = async (userId: number) => {
+    return list.sort((a, b) => {
+      if (a.id === user?.id) return -1;
+      if (b.id === user?.id) return 1;
+      return a.username.localeCompare(b.username);
+    });
+  }, [players, user]);
+
+
+  const handleChallenge = async (player: any) => {
+    const targetId = player.id;
+
+    if (!targetId) {
+      console.error("ID is missing from player object", player);
+      return;
+    }
+
+    setChallenging(targetId);
     setErrorMessage(null);
+
     try {
-      const game = await lobbyApi.challengeUser(userId);
-      navigate(`/games/${game.id}`);
+      const newGame = await lobbyApi.challengeUser(targetId);
+      navigate(`/games/${newGame.id}`, { state: { opponentName: player.username } });
     } catch (err) {
-      setErrorMessage(isApiError(err) ? err.message : "Failed to challenge player");
+      console.error("Challenge failed", err);
+      setErrorMessage(isApiError(err) ? err.message : "Failed to send challenge");
+      setChallenging(null);
     }
   };
 
-  const sortedPlayers = [...playerList].sort((a, b) => {
-    if (a.id === user?.id) return -1;
-    if (b.id === user?.id) return 1;
-    return 0;
-  });
-
   return (
-    <section
-      style={{
-        border: "1px solid var(--color-border)",
-        borderRadius: "var(--radius)",
-        background: "#f2f8ff",
-        padding: "var(--spacing-md)",
-        display: "grid",
-        gap: "var(--spacing-sm)",
-      }}
-    >
-      <h2 style={{ margin: 0, fontSize: 18 }}>Online Players</h2>
+    <div className="lobby-panel">
+      <div className="panel-header">
+        <span>online</span>
+        <span className="panel-count">{displayList.length}</span>
+      </div>
+      <div className="panel-body">
+        {errorMessage && <div className="banner-error" style={{ marginBottom: 6 }}>{errorMessage}</div>}
+        {displayList.length === 0 && <div className="panel-empty">no players online</div>}
 
-      {errorMessage && <ErrorBanner message={errorMessage} />}
-
-      {sortedPlayers.length === 0 && (
-        <p style={{ margin: 0, color: "var(--color-text-muted)" }}>No online players.</p>
-      )}
-
-      {sortedPlayers.map((player) => (
-        <div
-          key={player.id}
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: "var(--spacing-sm)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "var(--radius)",
-            padding: "var(--spacing-sm)",
-          }}
-        >
-          <span>
-            {player.username}
-            {user?.id === player.id && (
-              <span style={{ marginLeft: 6, color: "var(--color-text-muted)" }}>(You)</span>
+        {displayList.map((p) => (
+          <div key={p.id} className="player-row">
+            <span className="player-name">
+              <span className="online-dot" />
+              {p.username}
+              {user?.id === p.id && <span className="you-badge">you</span>}
+            </span>
+            {user?.id !== p.id && (
+              <button
+                className="btn btn-primary"
+                style={{ padding: "4px 10px", fontSize: 11 }}
+                onClick={() => handleChallenge(p)}
+                disabled={challenging === p.id}
+              >
+                {challenging === p.id ? "..." : "challenge"}
+              </button>
             )}
-          </span>
-          <Button
-            onClick={() => handleChallenge(player.id)}
-            disabled={user?.id === player.id}
-            title={user?.id === player.id ? "You cannot challenge yourself" : undefined}
-            style={
-              user?.id === player.id
-                ? {
-                    padding: "8px 16px",
-                    background: "#94a3b8",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "var(--radius)",
-                    fontSize: 14,
-                    cursor: "not-allowed",
-                    opacity: 1,
-                  }
-                : {
-                    padding: "8px 16px",
-                    background: "#22c55e",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "var(--radius)",
-                    fontSize: 14,
-                    cursor: "pointer",
-                    opacity: 1,
-                  }
-            }
-          >
-            Challenge
-          </Button>
-        </div>
-      ))}
-    </section>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 };
 
