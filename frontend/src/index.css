@@ -504,9 +504,27 @@ input, button {
   align-items: center;
 }
 
-.board-section {
+.dual-board-container {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  align-items: flex-start;
+  justify-content: center;
   width: 100%;
-  max-width: 340px;
+  max-width: 720px;
+}
+
+.dual-board-divider {
+  width: 1px;
+  background: var(--border-strong);
+  align-self: stretch;
+  margin: 0 20px;
+  flex-shrink: 0;
+}
+
+.board-section {
+  flex: 1;
+  max-width: 300px;
 }
 
 .board-section-label {
@@ -544,10 +562,11 @@ input, button {
   border: 1px solid transparent;
 }
 
-.tile-correct { background: rgba(34,197,94,0.2); color: var(--tile-correct); border-color: rgba(34,197,94,0.4); }
-.tile-present { background: rgba(245,158,11,0.2); color: var(--tile-present); border-color: rgba(245,158,11,0.4); }
-.tile-absent  { background: var(--bg-elevated); color: var(--text-muted); border-color: var(--border-strong); }
-.tile-empty   { background: var(--bg-elevated); color: transparent; border-color: var(--border); }
+.tile-correct   { background: rgba(34,197,94,0.2); color: var(--tile-correct); border-color: rgba(34,197,94,0.4); }
+.tile-present   { background: rgba(245,158,11,0.2); color: var(--tile-present); border-color: rgba(245,158,11,0.4); }
+.tile-absent    { background: var(--bg-elevated); color: var(--text-muted); border-color: var(--border-strong); }
+.tile-empty     { background: var(--bg-elevated); color: transparent; border-color: var(--border); }
+.tile-concealed { background: var(--bg-elevated); color: transparent; border-color: var(--border-strong); }
 
 .game-input-area {
   padding: 12px 20px;
