@@ -1,46 +1,88 @@
-# Getting Started with Create React App
+# Competitive Wordle — Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+React + TypeScript client for a multiplayer Wordle-style game. It talks to a **Spring Boot** backend over **REST** (JSON) and **STOMP over SockJS** (real-time lobby, game updates, and chat). See the backend under `../backend` (package `edu.rit.backend`) for API behavior, security, and WebSocket broker configuration.
 
-## Available Scripts
+## Stack
 
-In the project directory, you can run:
+- **React 19** with **Create React App** (`react-scripts`)
+- **TypeScript**
+- **React Router** (`react-router-dom`) for client-side routing
+- **Fetch** via a small `request()` wrapper (`src/api/httpClient.ts`) with JWT `Authorization` headers
+- **STOMP** + **SockJS** for WebSockets (`src/ws/stompClient.ts`), matching the backend endpoint `/ws` — the implementation imports `@stomp/stompjs` and `sockjs-client`; they must be installed dependencies for the app to build (add them with npm if your `package.json` does not list them yet)
 
-### `npm start`
+## Prerequisites
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+- **Node.js** and npm (versions compatible with CRA 5)
+- Backend running and reachable (default **http://localhost:8080**), with CORS allowing the dev origin **http://localhost:3000** (as configured in the backend)
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## Configuration
 
-### `npm test`
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `REACT_APP_API_BASE_URL` | Base URL for REST **and** the SockJS endpoint (`{base}/ws`) | `http://localhost:8080` |
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Set in `.env` or `.env.local` in this folder (CRA convention: only variables prefixed with `REACT_APP_` are exposed).
 
-### `npm run build`
+## Scripts
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+| Command | Description |
+|---------|-------------|
+| `npm start` | Dev server at [http://localhost:3000](http://localhost:3000) with hot reload |
+| `npm run build` | Production build in `build/` |
+| `npm test` | Jest / React Testing Library (`*.test.tsx`) |
+| `npm run eject` | Irreversible CRA eject (rarely needed) |
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## How it fits the backend
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- **REST**: JSON under `{API_BASE_URL}/api/...` — login/register, current user, lobby lists, game CRUD, guesses, chat history, etc. The backend issues **JWT** access tokens; the client stores them (see `src/auth/tokenStorage.ts`) and sends `Authorization: Bearer <token>` on API calls.
+- **WebSockets**: The client opens **SockJS** to `{API_BASE_URL}/ws`, then connects with **STOMP** using the same Bearer token in `connectHeaders`. Broker prefixes align with Spring’s typical setup: application destinations `/app`, topics `/topic`, user queues `/user/...`.
 
-### `npm run eject`
+This mirrors `WebSocketConfig` in the backend (`/ws`, `/app`, `/topic`, `/queue`, `/user`).
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+## App behavior (routes & features)
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+| Path | Guard | Role |
+|------|--------|------|
+| `/login` | Public | Sign in; redirects to `/lobby` on success |
+| `/register` | Public | Fetches a registration token from the API, then registers and redirects to `/login` with a success message |
+| `/lobby` | Authenticated (`ProtectedRoute`) | Lobby: online players, incoming challenges, lobby chat |
+| `/games/:gameId` | Authenticated | Active or pending game: board, guesses, forfeit, rematch flow, per-game chat sidebar |
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+There is **no** `/` route defined; open `/login` or `/lobby` directly (or bookmark them).
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+**Auth shell**: `AuthProvider` hydrates the user from a stored token via `GET /api/me`. `ProtectedRoute` sends unauthenticated users to `/login`.
 
-## Learn More
+**Lobby** (`LobbyPage`): Initial load uses REST (`/api/lobby/players`, challenges, chat history). **WebSocket** subscriptions keep player list and lobby chat live; new challenges also arrive on `/user/queue/challenges`. Challenges are **polled** every ~3s as a fallback. Sending lobby chat uses STOMP publish to `/app/lobby/chat.send`.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+**Game** (`GamePage`): Loads game via `GET /api/games/:id`. Subscribes to `/topic/game/{id}` for full game payload updates, `/topic/game/{id}/presence` for opponent leave events, and `/user/queue/challenges` for rematch notifications. While status is `IN_PROGRESS` or `WAITING_FOR_PLAYER`, state is also **polled** every ~3s (`useGamePolling`). Guesses go through `POST /api/games/:id/guess`. Leaving publishes to `/app/game/{id}/leave`. Game chat (`GameChatPanel`) loads history from REST and subscribes to `/topic/game/{id}/chat`; send uses `/app/game/{id}/chat.send`.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+**Wordle UI**: `WordleBoard` + `GuessInput` enforce **5-letter** guesses and show server-provided feedback strings.
+
+## Source layout
+
+```
+src/
+  api/           # authApi, userApi, lobbyApi, gameApi; shared request() + error typing
+  auth/          # AuthContext, token storage, ProtectedRoute
+  components/    # layout (AppLayout, NavBar), ui primitives (Button, Input, Spinner, …)
+  config/        # env (API base URL)
+  features/
+    auth/        # LoginPage, RegisterPage
+    game/        # GamePage, WordleBoard, GuessInput, GameChatPanel
+    lobby/       # LobbyPage, panels (players, challenges, chat)
+  hooks/         # useLobbyWebSocket, useGamePolling
+  routes/        # Route table
+  styles/        # Global CSS; index.css ties variables and layout
+  types/         # Shared TS types (API DTOs, domain enums)
+  ws/            # STOMP/SockJS singleton client (connect, subscribe, publish)
+  App.tsx        # AuthProvider + BrowserRouter + routes
+  index.tsx      # Entry
+```
+
+## Tests
+
+Colocated tests include `AuthContext.test.tsx`, `httpClient.test.ts`, `tokenStorage.test.ts`, and `App.test.tsx`. Run with `npm test`.
+
+## Related docs
+
+- Backend: `../backend/README.md` — how to run the API, database, and how controllers map to the routes above.
