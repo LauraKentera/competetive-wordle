@@ -2,6 +2,7 @@ package edu.rit.backend.game.service;
 
 import edu.rit.backend.chat.service.ChatService;
 import edu.rit.backend.game.client.WordApiClient;
+import edu.rit.backend.game.client.WordValidatorClient;
 import edu.rit.backend.game.dto.GameDto;
 import edu.rit.backend.game.dto.GuessDto;
 import edu.rit.backend.game.dto.GuessResult;
@@ -31,16 +32,19 @@ public class GameService {
     private final GameRepository gameRepository;
     private final GuessRepository guessRepository;
     private final WordApiClient wordApiClient;
+    private final WordValidatorClient wordValidatorClient;
     private final ChatService chatService;
     private final SimpMessagingTemplate messagingTemplate;
     private final UserRepository userRepository;
 
     public GameService(GameRepository gameRepository, GuessRepository guessRepository,
-            WordApiClient wordApiClient, ChatService chatService, SimpMessagingTemplate messagingTemplate,
+            WordApiClient wordApiClient, WordValidatorClient wordValidatorClient,
+            ChatService chatService, SimpMessagingTemplate messagingTemplate,
             UserRepository userRepository) {
         this.gameRepository = gameRepository;
         this.guessRepository = guessRepository;
         this.wordApiClient = wordApiClient;
+        this.wordValidatorClient = wordValidatorClient;
         this.chatService = chatService;
         this.messagingTemplate = messagingTemplate;
         this.userRepository = userRepository;
@@ -157,6 +161,9 @@ public class GameService {
         }
         if (game.getWordLength() != null && guessWord.length() != game.getWordLength()) {
             throw new IllegalArgumentException("Guess must be " + game.getWordLength() + " letters");
+        }
+        if (!wordValidatorClient.isValidWord(guessWord)) {
+            throw new IllegalArgumentException("\"" + guessWord.toUpperCase() + "\" is not a valid word");
         }
 
         long myGuessCount = guessRepository.findByGameIdOrderByAttemptNumberAsc(gameId).stream()

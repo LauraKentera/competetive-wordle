@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import AppLayout from "../components/layout/AppLayout";
 import ProtectedRoute from "../auth/ProtectedRoute";
 import LoginPage from "../features/auth/LoginPage";
@@ -9,6 +9,7 @@ import GamePage from "../features/game/GamePage";
 
 const routes = (
   <Routes>
+    <Route path="/" element={<Navigate to="/login" replace />} />
     <Route path="/login" element={<LoginPage />} />
     <Route path="/register" element={<RegisterPage />} />
     <Route element={<ProtectedRoute />}>

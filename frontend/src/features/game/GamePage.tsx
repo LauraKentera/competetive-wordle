@@ -483,10 +483,17 @@ const GamePage: React.FC = () => {
         </div>
 
         <div className="game-board-area">
-          {errorMessage && <div className="banner-error" style={{ width: "100%", maxWidth: 340 }}>{errorMessage}</div>}
-          <div className="board-section">
-            <div className="board-section-label">your guesses</div>
-            <WordleBoard guesses={game.guesses} currentUserId={user?.id ?? -1} />
+          {errorMessage && <div className="banner-error" style={{ width: "100%", maxWidth: 720 }}>{errorMessage}</div>}
+          <div className="dual-board-container">
+            <div className="board-section">
+              <div className="board-section-label">your board</div>
+              <WordleBoard guesses={game.guesses} currentUserId={user?.id ?? -1} />
+            </div>
+            <div className="dual-board-divider" />
+            <div className="board-section">
+              <div className="board-section-label">{opponentUsername ? `${opponentUsername}'s board` : "opponent's board"}</div>
+              <WordleBoard guesses={game.guesses} currentUserId={opponentId ?? -1} concealed={!isCompleted} />
+            </div>
           </div>
           {isInProgress && user && (
             <div style={{ width: "100%", maxWidth: 340 }}>

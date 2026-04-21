@@ -26,7 +26,7 @@ public class WordApiClient {
 
     public WordApiClient(
             RestTemplateBuilder builder,
-            @Value("${app.word-api.url:https://random-word-api.herokuapp.com/word?length=5}") String wordApiUrl) {
+            @Value("${app.word-api.url:https://random-word-api.vercel.app/api?words=1&length=5}") String wordApiUrl) {
         this.restTemplate = builder
                 .setConnectTimeout(Duration.ofMillis(CONNECT_TIMEOUT_MS))
                 .setReadTimeout(Duration.ofMillis(READ_TIMEOUT_MS))
