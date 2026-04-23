@@ -31,6 +31,9 @@ public class User {
     @Column(nullable = false, length = 20)
     private UserStatus status = UserStatus.OFFLINE;
 
+    @Column(name = "avatar_id", nullable = false)
+    private int avatarId = 1;
+
     protected User() {
         // JPA
     }
@@ -70,6 +73,10 @@ public class User {
         return status;
     }
 
+    public int getAvatarId() {
+        return avatarId;
+    }
+
     public void setPasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
     }
@@ -84,5 +91,9 @@ public class User {
 
     public void setStatus(UserStatus status) {
         this.status = status;
+    }
+
+    public void setAvatarId(int avatarId) {
+        this.avatarId = avatarId;
     }
 }
