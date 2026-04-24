@@ -28,6 +28,18 @@ public class UserController {
     @GetMapping("/api/users/{id}")
     public UserResponse getById(@PathVariable Long id) {
         var user = users.findById(id).orElseThrow(() -> new IllegalArgumentException("User not found"));
+        return new UserResponse(
+                user.getId(),
+                user.getUsername(),
+                user.getRole(),
+                user.getStatus(),
+                user.getLastLogin(),
+                user.getGamesPlayed(),
+                user.getGamesWon(),
+                user.getGamesLost(),
+                user.getGamesDrawn(),
+                user.getGamesForfeited()
+        );
         return UserResponse.from(user);
     }
 
@@ -37,6 +49,19 @@ public class UserController {
         var user = users.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
+        return new UserResponse(
+                user.getId(),
+                user.getUsername(),
+                user.getRole(),
+                user.getStatus(),
+                user.getLastLogin(),
+                user.getGamesPlayed(),
+                user.getGamesWon(),
+                user.getGamesLost(),
+                user.getGamesDrawn(),
+                user.getGamesForfeited()
+        );
+    }
         return UserResponse.from(user);
     }
 
