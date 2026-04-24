@@ -38,6 +38,7 @@ export interface UserResponse {
   role: Role;
   status: UserStatus;
   lastLogin: string; // Instant -> string
+  avatarId: number;
 }
 
 /* =========================
@@ -74,6 +75,7 @@ export interface LobbyPlayerDto {
   id: number;
   username: string;
   status: UserStatus;
+  avatarId?: number;
 }
 
 export interface LobbyChatMessage {

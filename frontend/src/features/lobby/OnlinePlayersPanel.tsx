@@ -4,8 +4,11 @@ import { lobbyApi } from "../../api/lobbyApi";
 import { isApiError } from "../../api/httpClient";
 import { LobbyPlayerDto } from "../../types/api";
 import { useAuth } from "../../auth";
+import Avatar from "../../components/ui/Avatar";
 
-interface Props { players: LobbyPlayerDto[]; }
+interface Props {
+  players: LobbyPlayerDto[];
+}
 
 const OnlinePlayersPanel: React.FC<Props> = ({ players }) => {
   const { user } = useAuth();
@@ -17,11 +20,13 @@ const OnlinePlayersPanel: React.FC<Props> = ({ players }) => {
     let list = [...players];
 
     const isMeInList = user && list.some((p) => p.id === user.id);
+
     if (!isMeInList && user) {
       list.push({
         id: user.id,
         username: user.username,
         status: "ONLINE" as any,
+        avatarId: user.avatarId ?? 1,
       });
     }
 
@@ -32,8 +37,7 @@ const OnlinePlayersPanel: React.FC<Props> = ({ players }) => {
     });
   }, [players, user]);
 
-
-  const handleChallenge = async (player: any) => {
+  const handleChallenge = async (player: LobbyPlayerDto) => {
     const targetId = player.id;
 
     if (!targetId) {
@@ -46,10 +50,14 @@ const OnlinePlayersPanel: React.FC<Props> = ({ players }) => {
 
     try {
       const newGame = await lobbyApi.challengeUser(targetId);
-      navigate(`/games/${newGame.id}`, { state: { opponentName: player.username } });
+      navigate(`/games/${newGame.id}`, {
+        state: { opponentName: player.username },
+      });
     } catch (err) {
       console.error("Challenge failed", err);
-      setErrorMessage(isApiError(err) ? err.message : "Failed to send challenge");
+      setErrorMessage(
+        isApiError(err) ? err.message : "Failed to send challenge"
+      );
       setChallenging(null);
     }
   };
@@ -60,17 +68,31 @@ const OnlinePlayersPanel: React.FC<Props> = ({ players }) => {
         <span>online</span>
         <span className="panel-count">{displayList.length}</span>
       </div>
+
       <div className="panel-body">
-        {errorMessage && <div className="banner-error" style={{ marginBottom: 6 }}>{errorMessage}</div>}
-        {displayList.length === 0 && <div className="panel-empty">no players online</div>}
+        {errorMessage && (
+          <div className="banner-error" style={{ marginBottom: 6 }}>
+            {errorMessage}
+          </div>
+        )}
+
+        {displayList.length === 0 && (
+          <div className="panel-empty">no players online</div>
+        )}
 
         {displayList.map((p) => (
           <div key={p.id} className="player-row">
             <span className="player-name">
               <span className="online-dot" />
+              <Avatar
+                avatarId={p.avatarId ?? 1}
+                size="sm"
+                username={p.username}
+              />
               {p.username}
               {user?.id === p.id && <span className="you-badge">you</span>}
             </span>
+
             {user?.id !== p.id && (
               <button
                 className="btn btn-primary"
