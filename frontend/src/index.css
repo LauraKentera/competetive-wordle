@@ -387,6 +387,118 @@ input, button {
   color: var(--amber);
 }
 
+/* ── Avatars / Profile ── */
+.avatar {
+  border-radius: 999px;
+  object-fit: cover;
+  display: inline-block;
+  flex-shrink: 0;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elevated);
+}
+
+.avatar-sm {
+  width: 28px;
+  height: 28px;
+}
+
+.avatar-md {
+  width: 42px;
+  height: 42px;
+}
+
+.avatar-lg {
+  width: 64px;
+  height: 64px;
+}
+
+.navbar-profile-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.navbar-profile-button:hover .navbar-user {
+  color: var(--accent);
+}
+
+.avatar-picker {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.avatar-picker-option {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  padding: 4px;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.avatar-picker-option:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-elevated);
+}
+
+.avatar-picker-option.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.profile-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.profile-modal {
+  width: 320px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+}
+
+.profile-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.profile-modal-header h2 {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.profile-modal-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.profile-saving-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  margin-top: 10px;
+}
+
 /* ── Lobby Chat ── */
 .chat-messages {
   flex: 1;
