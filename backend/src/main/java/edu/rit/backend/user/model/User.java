@@ -31,6 +31,21 @@ public class User {
     @Column(nullable = false, length = 20)
     private UserStatus status = UserStatus.OFFLINE;
 
+    @Column(name = "games_played", nullable = false)
+    private int gamesPlayed = 0;
+
+    @Column(name = "games_won", nullable = false)
+    private int gamesWon = 0;
+
+    @Column(name = "games_lost", nullable = false)
+    private int gamesLost = 0;
+
+    @Column(name = "games_drawn", nullable = false)
+    private int gamesDrawn = 0;
+
+    @Column(name = "games_forfeited", nullable = false)
+    private int gamesForfeited = 0;
+
     protected User() {
         // JPA
     }
@@ -68,6 +83,26 @@ public class User {
 
     public UserStatus getStatus() {
         return status;
+    }
+
+    public int getGamesPlayed() {
+        return gamesPlayed;
+    }
+
+    public int getGamesWon() {
+        return gamesWon;
+    }
+
+    public int getGamesLost() {
+        return gamesLost;
+    }
+
+    public int getGamesDrawn() {
+        return gamesDrawn;
+    }
+
+    public int getGamesForfeited() {
+        return gamesForfeited;
     }
 
     public void setPasswordHash(String passwordHash) {

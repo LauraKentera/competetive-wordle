@@ -5,4 +5,15 @@ import edu.rit.backend.user.model.UserStatus;
 
 import java.time.Instant;
 
-public record UserResponse(Long id, String username, Role role, UserStatus status, Instant lastLogin) {}
+public record UserResponse(
+        Long id,
+        String username,
+        Role role,
+        UserStatus status,
+        Instant lastLogin,
+        int gamesPlayed,
+        int gamesWon,
+        int gamesLost,
+        int gamesDrawn,
+        int gamesForfeited
+) {}
