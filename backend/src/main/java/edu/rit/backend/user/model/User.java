@@ -45,6 +45,8 @@ public class User {
 
     @Column(name = "games_forfeited", nullable = false)
     private int gamesForfeited = 0;
+    @Column(name = "avatar_id", nullable = false)
+    private int avatarId = 1;
 
     protected User() {
         // JPA
@@ -103,6 +105,8 @@ public class User {
 
     public int getGamesForfeited() {
         return gamesForfeited;
+    public int getAvatarId() {
+        return avatarId;
     }
 
     public void setPasswordHash(String passwordHash) {
@@ -119,5 +123,9 @@ public class User {
 
     public void setStatus(UserStatus status) {
         this.status = status;
+    }
+
+    public void setAvatarId(int avatarId) {
+        this.avatarId = avatarId;
     }
 }
