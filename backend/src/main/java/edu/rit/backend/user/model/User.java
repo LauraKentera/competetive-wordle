@@ -105,6 +105,8 @@ public class User {
 
     public int getGamesForfeited() {
         return gamesForfeited;
+    }
+
     public int getAvatarId() {
         return avatarId;
     }
