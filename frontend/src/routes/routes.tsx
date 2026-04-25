@@ -6,6 +6,7 @@ import LoginPage from "../features/auth/LoginPage";
 import RegisterPage from "../features/auth/RegisterPage";
 import LobbyPage from "../features/lobby/LobbyPage";
 import GamePage from "../features/game/GamePage";
+import ProfilePage from "../features/profile/ProfilePage";
 
 const routes = (
   <Routes>
@@ -16,6 +17,7 @@ const routes = (
       <Route element={<AppLayout />}>
         <Route path="/lobby" element={<LobbyPage />} />
         <Route path="/games/:gameId" element={<GamePage />} />
+        <Route path="/profile/:userId" element={<ProfilePage />} />
       </Route>
     </Route>
   </Routes>

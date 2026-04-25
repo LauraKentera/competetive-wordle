@@ -19,6 +19,11 @@ const NavBar: React.FC = () => {
     navigate("/login");
   };
 
+  const handleMyProfile = () => {
+    if (!user) return;
+    navigate(`/profile/${user.id}`);
+  };
+
   const handleAvatarSelect = async (avatarId: 1 | 2 | 3) => {
     if (!user || user.avatarId === avatarId) return;
 
@@ -54,6 +59,10 @@ const NavBar: React.FC = () => {
               username={user.username}
             />
             <span className="navbar-user">{user.username}</span>
+          </button>
+
+          <button className="btn btn-ghost" onClick={handleMyProfile}>
+            my profile
           </button>
 
           <button className="btn btn-ghost" onClick={handleLogout}>

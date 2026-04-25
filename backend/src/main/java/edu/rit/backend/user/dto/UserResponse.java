@@ -6,7 +6,19 @@ import edu.rit.backend.user.model.UserStatus;
 
 import java.time.Instant;
 
-public record UserResponse(Long id, String username, Role role, UserStatus status, Instant lastLogin, int avatarId) {
+public record UserResponse(
+        Long id,
+        String username,
+        Role role,
+        UserStatus status,
+        Instant lastLogin,
+        int avatarId,
+        int gamesPlayed,
+        int gamesWon,
+        int gamesLost,
+        int gamesDrawn,
+        int gamesForfeited
+) {
 
     public static UserResponse from(User user) {
         return new UserResponse(
@@ -15,7 +27,12 @@ public record UserResponse(Long id, String username, Role role, UserStatus statu
                 user.getRole(),
                 user.getStatus(),
                 user.getLastLogin(),
-                user.getAvatarId()
+                user.getAvatarId(),
+                user.getGamesPlayed(),
+                user.getGamesWon(),
+                user.getGamesLost(),
+                user.getGamesDrawn(),
+                user.getGamesForfeited()
         );
     }
 }
