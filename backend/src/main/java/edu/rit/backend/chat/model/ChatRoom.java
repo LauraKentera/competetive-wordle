@@ -1,7 +1,10 @@
 package edu.rit.backend.chat.model;
 
+import edu.rit.backend.user.model.User;
 import jakarta.persistence.*;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 @Entity
 @Table(name = "chat_rooms")
@@ -18,6 +21,14 @@ public class ChatRoom {
 
     @Column(name = "game_id")
     private Long gameId;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "chat_room_members",
+        joinColumns = @JoinColumn(name = "room_id"),
+        inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    private Set<User> members = new HashSet<>();
 
     protected ChatRoom() {
     }
@@ -37,6 +48,10 @@ public class ChatRoom {
 
     public Long getGameId() {
         return gameId;
+    }
+
+    public Set<User> getMembers() {
+        return members;
     }
 
     @Override
