@@ -72,6 +72,11 @@ export interface GameChatSendRequest {
   content: string;
 }
 
+export interface DmRoomDto {
+  roomId: number;
+  messages: ChatMessageDto[];
+}
+
 /* =========================
    LOBBY DTOs
 ========================= */
