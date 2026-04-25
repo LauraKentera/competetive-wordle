@@ -1,13 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { userApi } from "../../api/userApi";
+import { getFriends, getPendingRequests, sendFriendRequest, removeFriend } from "../../api/friendApi";
 import { isApiError } from "../../api/httpClient";
 import Spinner from "../../components/ui/Spinner";
 import Avatar from "../../components/ui/Avatar";
 import AvatarPicker from "../../components/ui/AvatarPicker";
+import FriendsPanel from "../lobby/FriendsPanel";
 import { useAuth } from "../../auth";
-import { UserResponse } from "../../types/api";
+import { FriendshipDto, UserResponse } from "../../types/api";
+
 import { UserStatus } from "../../types/domain";
+
+type FriendStatus = "none" | "pending" | "friends";
 
 const statusLabel = (status: UserStatus): string => {
   switch (status) {
@@ -37,6 +42,13 @@ const ProfilePage: React.FC = () => {
   const [isSavingAvatar, setIsSavingAvatar] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
 
+  const [friendStatus, setFriendStatus] = useState<FriendStatus>("none");
+  const [friendAction, setFriendAction] = useState(false);
+  const [friendError, setFriendError] = useState<string | null>(null);
+
+  const [friends, setFriends] = useState<UserResponse[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<FriendshipDto[]>([]);
+
   const isMe = Boolean(currentUser && parsedUserId !== null && currentUser.id === parsedUserId);
 
   useEffect(() => {
@@ -51,8 +63,24 @@ const ProfilePage: React.FC = () => {
       setErrorMessage(null);
 
       try {
-        const u = await userApi.getUserById(parsedUserId);
-        setUser(u);
+        if (isMe) {
+          const [u, fr, pending] = await Promise.all([
+            userApi.getUserById(parsedUserId),
+            getFriends(),
+            getPendingRequests(),
+          ]);
+          setUser(u);
+          setFriends(fr);
+          setPendingRequests(pending);
+        } else {
+          const [u, friendsList] = await Promise.all([
+            userApi.getUserById(parsedUserId),
+            getFriends(),
+          ]);
+          setUser(u);
+          const match = friendsList.find((f) => f.id === parsedUserId);
+          if (match) setFriendStatus("friends");
+        }
       } catch (err) {
         setUser(null);
         setErrorMessage(isApiError(err) ? err.message : "Failed to load profile");
@@ -62,7 +90,7 @@ const ProfilePage: React.FC = () => {
     };
 
     void load();
-  }, [parsedUserId]);
+  }, [parsedUserId, isMe]);
 
   const winRate = useMemo(() => {
     const played = user?.gamesPlayed ?? 0;
@@ -87,6 +115,45 @@ const ProfilePage: React.FC = () => {
     } finally {
       setIsSavingAvatar(false);
     }
+  };
+
+  const handleSendFriendRequest = async () => {
+    if (!parsedUserId) return;
+    setFriendAction(true);
+    setFriendError(null);
+    try {
+      await sendFriendRequest(parsedUserId);
+      setFriendStatus("pending");
+    } catch (err) {
+      setFriendError(isApiError(err) ? err.message : "Failed to send friend request");
+    } finally {
+      setFriendAction(false);
+    }
+  };
+
+  const handleRemoveFriend = async () => {
+    if (!parsedUserId) return;
+    setFriendAction(true);
+    setFriendError(null);
+    try {
+      await removeFriend(parsedUserId);
+      setFriendStatus("none");
+    } catch (err) {
+      setFriendError(isApiError(err) ? err.message : "Failed to remove friend");
+    } finally {
+      setFriendAction(false);
+    }
+  };
+
+  const handleRequestHandled = (friendshipId: number) => {
+    setPendingRequests((prev) => prev.filter((r) => r.id !== friendshipId));
+  };
+
+  const handleFriendsRefresh = async () => {
+    try {
+      const fr = await getFriends();
+      setFriends(fr);
+    } catch {}
   };
 
   if (isLoading) return <Spinner />;
@@ -114,6 +181,43 @@ const ProfilePage: React.FC = () => {
               </span>
             </div>
           </div>
+
+          {!isMe && (
+            <div className="profile-friend-actions">
+              {friendStatus === "none" && (
+                <button
+                  className="btn btn-primary"
+                  onClick={handleSendFriendRequest}
+                  disabled={friendAction}
+                >
+                  {friendAction ? "..." : "Send Friend Request"}
+                </button>
+              )}
+              {friendStatus === "pending" && (
+                <button className="btn btn-outline" disabled>
+                  Request Sent
+                </button>
+              )}
+              {friendStatus === "friends" && (
+                <>
+                  <span className="profile-friends-check">Friends ✓</span>
+                  <button
+                    className="btn btn-danger"
+                    onClick={handleRemoveFriend}
+                    disabled={friendAction}
+                    style={{ marginLeft: 8 }}
+                  >
+                    {friendAction ? "..." : "Remove Friend"}
+                  </button>
+                </>
+              )}
+              {friendError && (
+                <div className="banner-error" style={{ marginTop: 8 }}>
+                  {friendError}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="profile-grid">
@@ -157,7 +261,6 @@ const ProfilePage: React.FC = () => {
               </div>
               <div className="profile-panel-body">
                 <div className="profile-avatar-edit">
-                  <Avatar avatarId={user.avatarId ?? 1} size="lg" username={user.username} />
                   <AvatarPicker
                     currentAvatarId={(user.avatarId ?? 1) as 1 | 2 | 3}
                     onSelect={handleAvatarSelect}
@@ -174,6 +277,18 @@ const ProfilePage: React.FC = () => {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {isMe && (
+            <div style={{ gridColumn: "1 / -1" }}>
+              <FriendsPanel
+                friends={friends}
+                pendingRequests={pendingRequests}
+                onRequestHandled={handleRequestHandled}
+                onFriendsRefresh={handleFriendsRefresh}
+                panelClassName="profile-panel"
+              />
             </div>
           )}
         </div>

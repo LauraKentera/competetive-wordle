@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { isApiError } from "../../api/httpClient";
 import { lobbyApi } from "../../api/lobbyApi";
+import { getFriends } from "../../api/friendApi";
 import { useLobbyWebSocket } from "../../hooks/useLobbyWebSocket";
-import { ChallengeDto, ChatMessageDto, LobbyPlayerDto } from "../../types/api";
+import { ChallengeDto, ChatMessageDto, LobbyPlayerDto, UserResponse } from "../../types/api";
 import Spinner from "../../components/ui/Spinner";
 import OnlinePlayersPanel from "./OnlinePlayersPanel";
 import ChallengesPanel from "./ChallengesPanel";
@@ -12,6 +13,7 @@ const LobbyPage: React.FC = () => {
   const [players, setPlayers] = useState<LobbyPlayerDto[]>([]);
   const [challenges, setChallenges] = useState<ChallengeDto[]>([]);
   const [chatHistory, setChatHistory] = useState<ChatMessageDto[]>([]);
+  const [friends, setFriends] = useState<UserResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -19,14 +21,16 @@ const LobbyPage: React.FC = () => {
     const load = async () => {
       setIsLoading(true);
       try {
-        const [p, c, ch] = await Promise.all([
+        const [p, c, ch, fr] = await Promise.all([
           lobbyApi.getPlayers(),
           lobbyApi.getChallenges(),
           lobbyApi.getChatHistory(50),
+          getFriends(),
         ]);
         setPlayers(p);
         setChallenges(c);
         setChatHistory(ch);
+        setFriends(fr);
       } catch (err) {
         setErrorMessage(isApiError(err) ? err.message : "Failed to load lobby");
       } finally {
@@ -66,7 +70,7 @@ const LobbyPage: React.FC = () => {
           <div className="banner-error">{errorMessage}</div>
         </div>
       )}
-      <OnlinePlayersPanel players={players} />
+      <OnlinePlayersPanel players={players} friends={friends} />
       <ChallengesPanel challenges={challenges} />
       <LobbyChatPanel initialMessages={chatHistory} sendLobbyChat={sendLobbyChat} />
     </div>
