@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { lobbyApi } from "../../api/lobbyApi";
 import { isApiError } from "../../api/httpClient";
 import { LobbyPlayerDto } from "../../types/api";
@@ -18,6 +18,16 @@ const OnlinePlayersPanel: React.FC<Props> = ({ players }) => {
 
   const displayList = useMemo(() => {
     let list = [...players];
+
+    // Keep the current user's lobby row in sync with AuthContext (avatar updates
+    // are local and may not trigger a server-side /topic/lobby/players refresh).
+    if (user) {
+      list = list.map((p) =>
+        p.id === user.id
+          ? { ...p, avatarId: user.avatarId ?? p.avatarId ?? 1, username: user.username }
+          : p
+      );
+    }
 
     const isMeInList = user && list.some((p) => p.id === user.id);
 
@@ -82,16 +92,16 @@ const OnlinePlayersPanel: React.FC<Props> = ({ players }) => {
 
         {displayList.map((p) => (
           <div key={p.id} className="player-row">
-            <span className="player-name">
+            <Link to={`/profile/${p.id}`} className="player-name player-name-link">
               <span className="online-dot" />
               <Avatar
-                avatarId={p.avatarId ?? 1}
+                avatarId={p.avatarId}
                 size="sm"
                 username={p.username}
               />
               {p.username}
               {user?.id === p.id && <span className="you-badge">you</span>}
-            </span>
+            </Link>
 
             {user?.id !== p.id && (
               <button

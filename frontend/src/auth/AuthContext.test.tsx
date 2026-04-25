@@ -22,8 +22,14 @@ const mockUserResponse = {
   id: 1,
   username: "testuser",
   role: "USER" as const,
-  status: "ACTIVE" as const,
+  status: "ONLINE" as const,
   lastLogin: "2026-04-03T12:00:00Z",
+  avatarId: 1,
+  gamesPlayed: 0,
+  gamesWon: 0,
+  gamesLost: 0,
+  gamesDrawn: 0,
+  gamesForfeited: 0,
 };
 
 // Test component that uses the hook

@@ -89,7 +89,7 @@ public class GameService {
         List<LobbyPlayerDto> players = userRepository
                 .findByStatusIn(List.of(UserStatus.ONLINE, UserStatus.IN_GAME))
                 .stream()
-                .map(u -> new LobbyPlayerDto(u.getId(), u.getUsername(), u.getStatus()))
+                .map(u -> new LobbyPlayerDto(u.getId(), u.getUsername(), u.getStatus(), u.getAvatarId()))
                 .toList();
         messagingTemplate.convertAndSend("/topic/lobby/players", players);
     }
