@@ -96,6 +96,19 @@ export interface ChallengeDto {
 }
 
 /* =========================
+   FRIEND DTOs
+========================= */
+
+export type FriendshipStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "BLOCKED";
+
+export interface FriendshipDto {
+  id: number;
+  user: UserResponse;
+  status: FriendshipStatus;
+  createdAt: string;
+}
+
+/* =========================
    GAME DTOs
 ========================= */
 
