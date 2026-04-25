@@ -92,6 +92,7 @@ input, button {
   color: var(--accent);
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  text-decoration: none;
 }
 
 .navbar-right {
@@ -279,7 +280,7 @@ input, button {
 .lobby-shell {
   flex: 1;
   display: grid;
-  grid-template-columns: 220px 1fr 280px;
+  grid-template-columns: 260px 1fr 280px;
   grid-template-rows: 1fr;
   gap: 1px;
   background: var(--border);
@@ -342,6 +343,7 @@ input, button {
   border-radius: var(--radius-sm);
   background: var(--bg-elevated);
   gap: 8px;
+  min-width: 0;
 }
 
 .player-name {
@@ -351,6 +353,8 @@ input, button {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .player-name-link:hover {
@@ -374,6 +378,72 @@ input, button {
   border: 1px solid var(--border-strong);
 }
 
+.offline-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.friend-star {
+  color: var(--amber);
+  font-size: 11px;
+}
+
+.friends-tabs {
+  display: flex;
+  gap: 0;
+  width: 100%;
+}
+
+.friends-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: color 0.15s;
+}
+
+.friends-tab:hover { color: var(--text); }
+
+.friends-tab-active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.friends-badge {
+  background: var(--accent);
+  color: var(--bg);
+  border-radius: 9999px;
+  font-size: 9px;
+  padding: 1px 5px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.banner-success {
+  background: rgba(57, 255, 126, 0.12);
+  border: 1px solid rgba(57, 255, 126, 0.35);
+  color: var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
 .challenge-row {
   display: flex;
   align-items: center;
@@ -395,7 +465,7 @@ input, button {
 .avatar {
   border-radius: 999px;
   object-fit: cover;
-  display: inline-block;
+  display: block;
   flex-shrink: 0;
   border: 1px solid var(--border-strong);
   background: var(--bg-elevated);
@@ -574,6 +644,19 @@ input, button {
   color: var(--amber);
 }
 
+.profile-friend-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-friends-check {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent);
+}
+
 .profile-grid {
   padding: 14px;
   display: grid;
@@ -641,9 +724,45 @@ input, button {
   .profile-grid {
     grid-template-columns: 1fr;
   }
+}
 
+@media (max-width: 640px) {
+  .profile-shell {
+    padding: 10px;
+  }
+
+  .profile-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .profile-friend-actions {
+    width: 100%;
+  }
+
+  .profile-username {
+    font-size: 15px;
+  }
+
+  .profile-grid {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .challenge-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 420px) {
   .profile-stats-grid {
     grid-template-columns: 1fr;
+  }
+
+  .profile-shell {
+    padding: 6px;
   }
 }
 
