@@ -19,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class DirectMessageService {
@@ -79,6 +80,16 @@ public class DirectMessageService {
         return chatRoomRepository.findById(roomId)
                 .map(r -> r.getMembers().stream().anyMatch(m -> m.getId().equals(userId)))
                 .orElse(false);
+    }
+
+    @Transactional(readOnly = true)
+    public List<User> getOtherMembers(Long roomId, Long userId) {
+        ChatRoom room = chatRoomRepository.findById(roomId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found"));
+        requireMember(room, userId);
+        return room.getMembers().stream()
+                .filter(member -> !member.getId().equals(userId))
+                .collect(Collectors.toList());
     }
 
     private ChatRoom createDmRoom(Long userId1, Long userId2) {

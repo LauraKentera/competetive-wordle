@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useOutletContext, useParams } from "react-router-dom";
 import { userApi } from "../../api/userApi";
 import { getFriends, getPendingRequests, sendFriendRequest, removeFriend } from "../../api/friendApi";
 import { isApiError } from "../../api/httpClient";
@@ -17,6 +17,10 @@ import { ChatMessageDto } from "../../types/api";
 import { UserStatus } from "../../types/domain";
 
 type FriendStatus = "none" | "pending" | "friends";
+interface LayoutDmContext {
+  unreadDmByUsername: Record<string, number>;
+  clearUnreadDmForUsername: (username: string) => void;
+}
 
 const statusLabel = (status: UserStatus): string => {
   switch (status) {
@@ -33,6 +37,7 @@ const statusLabel = (status: UserStatus): string => {
 const ProfilePage: React.FC = () => {
   const { user: currentUser, updateUser, token } = useAuth();
   const { userId } = useParams();
+  const layoutDmContext = useOutletContext<LayoutDmContext>();
 
   const [activeDm, setActiveDm] = useState<{ roomId: number; initialMessages: ChatMessageDto[] } | null>(null);
   const [openingDm, setOpeningDm] = useState(false);
@@ -196,11 +201,12 @@ const ProfilePage: React.FC = () => {
   const handleOpenDm = async () => {
     if (!parsedUserId) return;
     setOpeningDm(true);
+    setFriendError(null);
     try {
       const dm = await getOrCreateDmRoom(parsedUserId);
       setActiveDm({ roomId: dm.roomId, initialMessages: dm.messages });
     } catch (err) {
-      console.error("DM error:", err);  // 👈 add this
+      setFriendError(isApiError(err) ? err.message : "Failed to open direct message");
     } finally {
       setOpeningDm(false);
     }
@@ -344,6 +350,8 @@ const ProfilePage: React.FC = () => {
                 onRequestHandled={handleRequestHandled}
                 onFriendsRefresh={handleFriendsRefresh}
                 panelClassName="profile-panel"
+                unreadByUsername={layoutDmContext?.unreadDmByUsername ?? {}}
+                onClearUnreadForUsername={layoutDmContext?.clearUnreadDmForUsername}
               />
             </div>
           )}
