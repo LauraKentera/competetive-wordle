@@ -22,6 +22,9 @@ This starts:
 - **Redis** on port **6379** for lobby and game chat caching.
 
 See `infra/docker-compose.yml` for the full setup.
+This compose file is for local development infrastructure only.
+
+For production deployment with Railway + GitHub, see `docs/railway-deployment.md` at the repository root.
 
 ### 2. Build the backend
 
