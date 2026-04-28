@@ -42,7 +42,7 @@ class AuthIntegrationTest {
         String body = """
                 {
                     "username": "testuser",
-                    "password": "test123",
+                    "password": "test1234",
                     "registrationToken": "%s"
                 }
                 """.formatted(registrationToken);
@@ -61,7 +61,7 @@ class AuthIntegrationTest {
         String register = """
                 {
                     "username": "loginuser",
-                    "password": "test123",
+                    "password": "test1234",
                     "registrationToken": "%s"
                 }
                 """.formatted(registrationToken);
@@ -74,7 +74,7 @@ class AuthIntegrationTest {
         String login = """
                 {
                     "username": "loginuser",
-                    "password": "test123"
+                    "password": "test1234"
                 }
                 """;
 
@@ -91,7 +91,7 @@ class AuthIntegrationTest {
         String register = """
             {
                 "username": "secureuser",
-                "password": "test123",
+                "password": "test1234",
                 "registrationToken": "%s"
             }
             """.formatted(registrationToken);
@@ -122,7 +122,7 @@ class AuthIntegrationTest {
         String body = """
                 {
                     "username": "notokenuser",
-                    "password": "test123"
+                    "password": "test1234"
                 }
                 """;
         mockMvc.perform(post("/api/auth/register")
