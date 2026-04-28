@@ -8,6 +8,7 @@ interface UseLobbyWebSocketCallbacks {
   onPlayersUpdate?: (players: LobbyPlayerDto[]) => void;
   onLobbyChatMessage?: (message: ChatMessageDto) => void;
   onChallengeReceived?: (challenge: ChallengeDto) => void;
+  onFriendUpdate?: () => void;
 }
 
 export function useLobbyWebSocket(callbacks: UseLobbyWebSocketCallbacks) {
@@ -34,10 +35,14 @@ export function useLobbyWebSocket(callbacks: UseLobbyWebSocketCallbacks) {
         if (callbacks.onChallengeReceived)
           callbacks.onChallengeReceived(JSON.parse(msg.body) as ChallengeDto);
       });
+      const friendSub = subscribe("/user/queue/friend-requests", () => {
+        if (callbacks.onFriendUpdate) callbacks.onFriendUpdate();
+      });
 
       if (playersSub) subscriptions.push(playersSub);
       if (chatSub) subscriptions.push(chatSub);
       if (challengeSub) subscriptions.push(challengeSub);
+      if (friendSub) subscriptions.push(friendSub);
     };
 
     onConnect(doSub);

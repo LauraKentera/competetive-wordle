@@ -87,8 +87,6 @@ public class ChatService {
         if (content == null || content.isBlank()) {
             throw new IllegalArgumentException("Message content is required");
         }
-        ChatRoom room = chatRoomRepository.findById(chatRoomId)
-                .orElseThrow(() -> new IllegalArgumentException("Chat room not found"));
         Instant now = Instant.now();
         ChatMessage entity = new ChatMessage(chatRoomId, userId, content.trim(), now);
         entity = chatMessageRepository.save(entity);
