@@ -4,6 +4,7 @@ import NavBar from "./NavBar";
 import FriendToast from "../ui/FriendToast";
 import { useAuth } from "../../auth";
 import { connect, disconnect, subscribe, onConnect, offConnect } from "../../ws/stompClient";
+import { getPendingRequests } from "../../api/friendApi";
 
 interface ToastEntry {
   id: number;
@@ -22,11 +23,27 @@ const SUBTYPE_MESSAGES: Record<string, string> = {
 const AppLayout: React.FC = () => {
   const { user, token } = useAuth();
   const [toasts, setToasts] = useState<ToastEntry[]>([]);
+  const [unreadDmByUsername, setUnreadDmByUsername] = useState<Record<string, number>>({});
+  const [pendingFriendRequestCount, setPendingFriendRequestCount] = useState(0);
   const subsRef = useRef<{ unsubscribe: () => void }[]>([]);
 
   const dismiss = useCallback((id: number) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
+
+  const refreshPendingFriendRequests = useCallback(async () => {
+    try {
+      const pending = await getPendingRequests();
+      setPendingFriendRequestCount(pending.length);
+    } catch {
+      // keep current counter if refresh fails
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!token) return;
+    void refreshPendingFriendRequests();
+  }, [token, refreshPendingFriendRequests]);
 
   useEffect(() => {
     if (!token) return;
@@ -39,8 +56,20 @@ const AppLayout: React.FC = () => {
           const body = JSON.parse(msg.body) as { type: string; subtype?: string };
           const message = body.subtype ? SUBTYPE_MESSAGES[body.subtype] : undefined;
           if (message) setToasts(prev => [...prev, { id: ++toastSeq, message }]);
+          void refreshPendingFriendRequests();
         });
         subsRef.current.push(sub);
+
+        const dmSub = subscribe("/user/queue/dm-notifications", (msg) => {
+          const body = JSON.parse(msg.body) as { fromUsername?: string };
+          const from = body.fromUsername?.trim() || "someone";
+          setUnreadDmByUsername(prev => ({
+            ...prev,
+            [from]: (prev[from] ?? 0) + 1,
+          }));
+          setToasts(prev => [...prev, { id: ++toastSeq, message: `${from} sent you a message` }]);
+        });
+        subsRef.current.push(dmSub);
       } catch {}
     };
 
@@ -53,13 +82,23 @@ const AppLayout: React.FC = () => {
       subsRef.current = [];
       disconnect();
     };
-  }, [token]);
+  }, [token, refreshPendingFriendRequests]);
+
+  const totalUnreadDm = Object.values(unreadDmByUsername).reduce((sum, n) => sum + n, 0);
+  const clearUnreadDmForUsername = useCallback((username: string) => {
+    setUnreadDmByUsername(prev => {
+      if (!(username in prev)) return prev;
+      const next = { ...prev };
+      delete next[username];
+      return next;
+    });
+  }, []);
 
   return (
     <div className="app-shell">
-      <NavBar />
+      <NavBar unreadDmCount={totalUnreadDm} pendingFriendRequestCount={pendingFriendRequestCount} />
       <main className="app-main">
-        <Outlet />
+        <Outlet context={{ unreadDmByUsername, clearUnreadDmForUsername }} />
       </main>
 
       {user && toasts.length > 0 && (

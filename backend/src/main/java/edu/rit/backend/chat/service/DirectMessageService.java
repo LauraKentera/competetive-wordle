@@ -19,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 // Service handling direct (private) messaging between users
 @Service
@@ -104,6 +105,16 @@ public class DirectMessageService {
     }
 
     // Creates a new direct message room between two users
+    @Transactional(readOnly = true)
+    public List<User> getOtherMembers(Long roomId, Long userId) {
+        ChatRoom room = chatRoomRepository.findById(roomId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found"));
+        requireMember(room, userId);
+        return room.getMembers().stream()
+                .filter(member -> !member.getId().equals(userId))
+                .collect(Collectors.toList());
+    }
+
     private ChatRoom createDmRoom(Long userId1, Long userId2) {
         // Fetch both users or throw if not found
         User user1 = userRepository.findById(userId1)

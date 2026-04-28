@@ -12,6 +12,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
+import java.util.Map;
 
 // WebSocket controller for handling direct message (DM) communication
 @Controller
@@ -63,5 +64,17 @@ public class DirectMessageWsController {
 
         // Broadcast the message to all subscribers of the room topic
         messagingTemplate.convertAndSend("/topic/dm/" + roomId, dto);
+
+        directMessageService.getOtherMembers(roomId, userId).forEach(member ->
+                messagingTemplate.convertAndSendToUser(
+                        member.getUsername(),
+                        "/queue/dm-notifications",
+                        Map.of(
+                                "type", "DM_MESSAGE",
+                                "fromUsername", username,
+                                "roomId", roomId
+                        )
+                )
+        );
     }
 }

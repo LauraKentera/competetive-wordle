@@ -4,10 +4,12 @@ import edu.rit.backend.chat.dto.ChatMessageDto;
 import edu.rit.backend.chat.dto.DmRoomDto;
 import edu.rit.backend.chat.service.DirectMessageService;
 import edu.rit.backend.user.repo.UserRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -60,11 +62,24 @@ public class DirectMessageController {
     // Extracts the user ID from the JWT by resolving the username (subject)
     // and looking it up in the database
     private Long resolveUserId(Jwt jwt) {
+        if (jwt == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
+        }
+
+        Number uid = jwt.getClaim("uid");
+        if (uid != null) {
+            return uid.longValue();
+        }
+
         String username = jwt.getSubject();
 
         // Find user by username or throw an exception if not found
+        if (username == null || username.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid authentication token");
+        }
+
         return userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"))
                 .getId();
     }
 }
