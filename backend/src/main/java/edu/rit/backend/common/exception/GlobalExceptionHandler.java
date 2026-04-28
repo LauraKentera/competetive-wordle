@@ -12,10 +12,22 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 
+/**
+ * Global exception handler that intercepts exceptions thrown by any controller
+ * and returns a structured {@link ApiError} response with an appropriate HTTP status.
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    /**
+     * Handles bean validation errors triggered by {@code @Valid} on request bodies.
+     * Returns the first field-level validation message, or a generic fallback.
+     *
+     * @param ex      the validation exception
+     * @param request the current HTTP request
+     * @return a 400 Bad Request response with validation details
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
         String msg = ex.getBindingResult().getFieldErrors().isEmpty()
@@ -34,6 +46,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
+    /**
+     * Handles {@link IllegalArgumentException} thrown from service or controller logic.
+     *
+     * @param ex      the exception
+     * @param request the current HTTP request
+     * @return a 400 Bad Request response with the exception message
+     */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiError> handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest request) {
         ApiError body = new ApiError(
@@ -46,6 +65,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
+    /**
+     * Handles {@link ResponseStatusException} thrown when a specific HTTP status
+     * needs to be returned (e.g. 403 Forbidden, 409 Conflict).
+     *
+     * @param ex      the exception carrying the HTTP status and reason
+     * @param request the current HTTP request
+     * @return a response matching the exception's HTTP status
+     */
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiError> handleResponseStatus(ResponseStatusException ex, HttpServletRequest request) {
         HttpStatus status = HttpStatus.resolve(ex.getStatusCode().value());
@@ -60,6 +87,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ex.getStatusCode()).body(body);
     }
 
+    /**
+     * Catch-all handler for any unhandled exception.
+     * Logs the full stack trace and returns a generic 500 Internal Server Error response.
+     *
+     * @param ex      the unhandled exception
+     * @param request the current HTTP request
+     * @return a 500 Internal Server Error response
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGeneric(Exception ex, HttpServletRequest request) {
         log.error("Unhandled exception on {} {}", request.getMethod(), request.getRequestURI(), ex);

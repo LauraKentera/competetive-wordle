@@ -41,6 +41,15 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
     private final GameRepository gameRepository;
     private final DirectMessageService directMessageService;
 
+    /**
+     * Constructs a WebSocketAuthChannelInterceptor with the required dependencies.
+     *
+     * @param jwtDecoder                 decoder for validating JWT tokens
+     * @param jwtAuthenticationConverter converter that extracts an Authentication from a JWT
+     * @param userRepository             repository for resolving usernames to user IDs
+     * @param gameRepository             repository for verifying game membership on subscribe
+     * @param directMessageService       service for verifying DM room membership on subscribe
+     */
     public WebSocketAuthChannelInterceptor(JwtDecoder jwtDecoder,
                                            JwtAuthenticationConverter jwtAuthenticationConverter,
                                            UserRepository userRepository,
@@ -53,6 +62,16 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
         this.directMessageService = directMessageService;
     }
 
+    /**
+     * Intercepts each STOMP message before it is forwarded to a handler.
+     * On CONNECT: validates the JWT Bearer token and sets the authenticated principal.
+     * On SUBSCRIBE: enforces topic-level authorization based on game or DM room membership.
+     *
+     * @param message the incoming STOMP message
+     * @param channel the target message channel
+     * @return the original message if all checks pass
+     * @throws MessageDeliveryException if authentication or authorization fails
+     */
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
@@ -95,6 +114,16 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
         return message;
     }
 
+    /**
+     * Enforces authorization rules for STOMP SUBSCRIBE frames.
+     * Lobby topics and user queues are open to all authenticated users.
+     * Game topics require the subscriber to be a participant in the game.
+     * DM room topics require the subscriber to be a member of the room.
+     *
+     * @param destination the topic destination string the client wants to subscribe to
+     * @param username    the username of the authenticated subscriber
+     * @throws MessageDeliveryException if the user is not authorized to subscribe to the given topic
+     */
     private void enforceSubscriptionAuthorization(String destination, String username) {
         if (destination == null) return;
 
@@ -127,6 +156,13 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
         }
     }
 
+    /**
+     * Resolves a username to the corresponding user ID.
+     *
+     * @param username the username to look up
+     * @return the user's ID
+     * @throws MessageDeliveryException if no user with the given username exists
+     */
     private Long resolveUserId(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new MessageDeliveryException("User not found"))

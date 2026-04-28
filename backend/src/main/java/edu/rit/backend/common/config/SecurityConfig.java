@@ -30,6 +30,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Spring Security configuration for the application.
+ * Sets up stateless JWT-based authentication, CORS, CSRF protection,
+ * security response headers, and HTTP endpoint authorization rules.
+ */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -37,23 +42,44 @@ public class SecurityConfig {
     @Value("${app.jwt.secret}")
     private String jwtSecret;
 
+    /**
+     * Provides a BCrypt password encoder bean for hashing user passwords.
+     *
+     * @return a {@link BCryptPasswordEncoder} instance
+     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Provides a JWT encoder bean using HMAC-SHA256 with the configured secret key.
+     *
+     * @return a {@link JwtEncoder} for signing JWTs
+     */
     @Bean
     public JwtEncoder jwtEncoder() {
         SecretKey key = new SecretKeySpec(jwtSecret.getBytes(), "HmacSHA256");
         return new NimbusJwtEncoder(new ImmutableSecret<>(key));
     }
 
+    /**
+     * Provides a JWT decoder bean for validating incoming tokens signed with HMAC-SHA256.
+     *
+     * @return a {@link JwtDecoder} for verifying JWTs
+     */
     @Bean
     public JwtDecoder jwtDecoder() {
         SecretKey key = new SecretKeySpec(jwtSecret.getBytes(), "HmacSHA256");
         return NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS256).build();
     }
 
+    /**
+     * Provides a {@link JwtAuthenticationConverter} that reads granted authorities
+     * from the {@code role} claim and applies the {@code ROLE_} prefix.
+     *
+     * @return a configured {@link JwtAuthenticationConverter}
+     */
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter gac = new JwtGrantedAuthoritiesConverter();
@@ -65,6 +91,18 @@ public class SecurityConfig {
         return converter;
     }
 
+    /**
+     * Configures the main HTTP security filter chain.
+     * Disables CSRF, enforces CORS, sets stateless session management,
+     * applies security headers, and defines endpoint authorization rules.
+     *
+     * @param http                 the {@link HttpSecurity} builder
+     * @param entryPoint           custom entry point for unauthenticated requests
+     * @param converter            JWT authentication converter for extracting roles
+     * @param accessDeniedHandler  custom handler for authorization failures
+     * @return the configured {@link SecurityFilterChain}
+     * @throws Exception if any security configuration fails
+     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    JwtAuthEntryPoint entryPoint,
