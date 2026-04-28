@@ -24,16 +24,24 @@ public class AuthController {
 
     @GetMapping("/registration-token")
     public RegistrationTokenResponse getRegistrationToken(HttpServletRequest request) {
-        String clientIp = request.getRemoteAddr();
+        String clientIp = getClientIp(request);
         String userAgent = request.getHeader("User-Agent");
         return registrationTokenService.createToken(clientIp, userAgent);
     }
 
     @PostMapping("/register")
     public AuthResponse register(@Valid @RequestBody RegisterRequest req, HttpServletRequest request) {
-        String clientIp = request.getRemoteAddr();
+        String clientIp = getClientIp(request);
         String userAgent = request.getHeader("User-Agent");
         return auth.register(req.username(), req.password(), req.registrationToken(), clientIp, userAgent);
+    }
+
+    private String getClientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 
     @PostMapping("/login")
