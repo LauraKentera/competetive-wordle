@@ -59,7 +59,15 @@ public class GameController {
     }
 
     @GetMapping("/{id}")
-    public GameDto getGame(@PathVariable Long id) {
+    public GameDto getGame(@PathVariable Long id, Authentication auth) {
+        Long userId = currentUserId(auth);
+        Game game = gameRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Game not found"));
+        if (!userId.equals(game.getPlayerOneId())
+                && !userId.equals(game.getPlayerTwoId())
+                && !userId.equals(game.getInvitedPlayerId())) {
+            throw new IllegalArgumentException("Not authorized to view this game");
+        }
         return gameService.getGame(id);
     }
 

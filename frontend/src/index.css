@@ -280,7 +280,7 @@ input, button {
 .lobby-shell {
   flex: 1;
   display: grid;
-  grid-template-columns: 260px 1fr 280px;
+  grid-template-columns: 350px 1fr 280px;
   grid-template-rows: 1fr;
   gap: 1px;
   background: var(--border);
@@ -498,6 +498,21 @@ input, button {
 
 .navbar-profile-button:hover .navbar-user {
   color: var(--accent);
+}
+
+.navbar-unread-badge {
+  background: var(--accent);
+  color: var(--bg);
+  border-radius: 9999px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.4;
+  padding: 1px 6px;
+}
+
+.navbar-friend-request-badge {
+  background: var(--amber);
 }
 
 .avatar-picker {
@@ -1026,4 +1041,189 @@ input, button {
   flex-direction: column;
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Confirm modal ── */
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9000;
+  animation: fadeIn 0.15s ease forwards;
+}
+
+.confirm-modal {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: 24px 24px 20px;
+  width: 320px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: fadeIn 0.15s ease forwards;
+}
+
+.confirm-title {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.confirm-message {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+/* ── Friend toast notification ── */
+.friend-toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.friend-toast {
+  pointer-events: all;
+  background: var(--bg-panel);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  width: 280px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: toastSlideIn 0.2s ease forwards;
+}
+
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.friend-toast-body {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.friend-toast-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--amber);
+  flex-shrink: 0;
+}
+
+.friend-toast-msg {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.friend-toast-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.friend-toast-link {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--amber);
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+.friend-toast-link:hover { opacity: 0.75; }
+
+.friend-toast-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s;
+}
+.friend-toast-close:hover { color: var(--text); }
+
+/* ── Responsive: narrow viewports ── */
+@media (max-width: 900px) {
+  html, body, #root {
+    height: auto;
+    min-height: 100%;
+    overflow-y: auto;
+  }
+
+  .app-shell {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .app-main {
+    overflow: visible;
+    flex: unset;
+  }
+
+  .lobby-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    height: auto;
+    overflow: visible;
+  }
+
+  .lobby-panel {
+    flex: none;
+    height: 360px;
+  }
+
+  /* chat panel gets more room since messages need space */
+  .lobby-panel:last-child {
+    height: 440px;
+  }
+
+  .game-shell {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
+
+  .game-main {
+    min-height: 520px;
+    flex: none;
+  }
+
+  .game-sidebar {
+    height: 400px;
+    flex-shrink: 0;
+  }
 }

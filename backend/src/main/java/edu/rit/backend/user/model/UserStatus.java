@@ -1,7 +1,13 @@
 package edu.rit.backend.user.model;
 
 /**
- * User visibility in the lobby: ONLINE, OFFLINE, or IN_GAME.
+ * Presence state of a {@link User}, broadcast to the lobby via WebSocket.
+ *
+ * <ul>
+ *   <li>{@link #ONLINE}  — logged in and available to accept game invites</li>
+ *   <li>{@link #OFFLINE} — not connected; default state on account creation</li>
+ *   <li>{@link #IN_GAME} — currently in an active match; cannot be invited</li>
+ * </ul>
  */
 public enum UserStatus {
     ONLINE,

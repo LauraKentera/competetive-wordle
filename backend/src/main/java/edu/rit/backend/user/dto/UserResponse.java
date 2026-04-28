@@ -6,6 +6,12 @@ import edu.rit.backend.user.model.UserStatus;
 
 import java.time.Instant;
 
+/**
+ * Read-only projection of a {@link User} returned by the REST API.
+ *
+ * <p>Excludes sensitive fields such as {@code passwordHash}. Use the
+ * {@link #from(User)} factory to construct an instance from a {@link User} entity.
+ */
 public record UserResponse(
         Long id,
         String username,
@@ -20,6 +26,12 @@ public record UserResponse(
         int gamesForfeited
 ) {
 
+    /**
+     * Maps a {@link User} entity to its API representation.
+     *
+     * @param user the source entity
+     * @return a new {@link UserResponse} populated from the entity's fields
+     */
     public static UserResponse from(User user) {
         return new UserResponse(
                 user.getId(),

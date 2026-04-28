@@ -3,6 +3,14 @@ package edu.rit.backend.user.model;
 import jakarta.persistence.*;
 import java.time.Instant;
 
+/**
+ * JPA entity representing a registered player.
+ *
+ * <p>Stores authentication credentials, role, online status, selected avatar,
+ * and lifetime game statistics. All stat columns default to {@code 0} and are
+ * incremented atomically via {@link edu.rit.backend.user.repo.UserRepository}
+ * bulk-update queries rather than fetching the full entity.
+ */
 @Entity
 @Table(name = "users")
 public class User {
@@ -45,13 +53,21 @@ public class User {
 
     @Column(name = "games_forfeited", nullable = false)
     private int gamesForfeited = 0;
+
     @Column(name = "avatar_id", nullable = false)
     private int avatarId = 1;
 
+    /** Required by JPA — not for direct use. */
     protected User() {
-        // JPA
     }
 
+    /**
+     * Creates a new user with the given credentials and role.
+     *
+     * @param username     unique display name
+     * @param passwordHash bcrypt hash of the raw password
+     * @param role         assigned role; defaults to {@link Role#USER} if {@code null}
+     */
     public User(String username, String passwordHash, Role role) {
         this.username = username;
         this.passwordHash = passwordHash;

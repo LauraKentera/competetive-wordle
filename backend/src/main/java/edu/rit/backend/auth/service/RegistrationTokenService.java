@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -40,10 +41,10 @@ public class RegistrationTokenService {
         if (entity.isExpired(Instant.now())) {
             throw new IllegalArgumentException("Registration token has expired");
         }
-        if (clientIp != null && !clientIp.equals(entity.getIpAddress())) {
+        if (!Objects.equals(clientIp, entity.getIpAddress())) {
             throw new IllegalArgumentException("Registration token does not match this client");
         }
-        if (clientUserAgent != null && !clientUserAgent.equals(entity.getUserAgent())) {
+        if (!Objects.equals(clientUserAgent, entity.getUserAgent())) {
             throw new IllegalArgumentException("Registration token does not match this client");
         }
         entity.markUsed();

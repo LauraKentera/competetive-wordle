@@ -6,6 +6,7 @@ import { lobbyApi } from "../../api/lobbyApi";
 import { isApiError } from "../../api/httpClient";
 import { useAuth } from "../../auth";
 import Spinner from "../../components/ui/Spinner";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 import useGamePolling from "../../hooks/useGamePolling";
 import { ChallengeDto, GameDto, GuessDto, GuessResult } from "../../types/api";
 import { connect, isConnected, subscribe, onConnect, offConnect, publish } from "../../ws/stompClient";
@@ -46,6 +47,7 @@ const GamePage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isAccepting, setIsAccepting] = useState(false);
   const [isForfeiting, setIsForfeiting] = useState(false);
+  const [showForfeitConfirm, setShowForfeitConfirm] = useState(false);
   const [incomingChallenge, setIncomingChallenge] = useState<ChallengeDto | null>(null);
   const [isRematching, setIsRematching] = useState(false);
   const [rematchRequested, setRematchRequested] = useState(false);
@@ -241,9 +243,11 @@ const GamePage: React.FC = () => {
     finally { setIsAccepting(false); }
   };
 
-  const handleForfeit = async () => {
+  const handleForfeit = () => { if (gameId) setShowForfeitConfirm(true); };
+
+  const confirmForfeit = async () => {
+    setShowForfeitConfirm(false);
     if (!gameId) return;
-    if (!window.confirm("Forfeit? Your opponent will win.")) return;
     setIsForfeiting(true);
     try { await gameApi.forfeitGame(gameId); await loadGame(); }
     catch (err) { setErrorMessage(isApiError(err) ? err.message : "Failed to forfeit"); }
@@ -356,6 +360,17 @@ const GamePage: React.FC = () => {
 
   return (
     <div className="game-shell" style={{ position: "relative" }}>
+
+      {showForfeitConfirm && (
+        <ConfirmModal
+          title="forfeit game"
+          message="Your opponent will be declared the winner. This cannot be undone."
+          confirmLabel="forfeit"
+          cancelLabel="cancel"
+          onConfirm={confirmForfeit}
+          onCancel={() => setShowForfeitConfirm(false)}
+        />
+      )}
 
       {/* ── Game over modal ── */}
       {isCompleted && (
