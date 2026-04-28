@@ -22,6 +22,17 @@ interface Props {
   panelClassName?: string;
 }
 
+/**
+ * 
+ * FriendsPanel components
+ * 
+ * Displays the user's friends and pending friend requests.
+ * Responsibilities:
+ * Switch between friends list and request list
+ * Accept or reject incoming friend requests
+ * Open direct message rooms with friends
+ * Subscribe to DM rooms for unread message notifications
+ */
 const FriendsPanel: React.FC<Props> = ({
   friends,
   pendingRequests,
@@ -29,26 +40,45 @@ const FriendsPanel: React.FC<Props> = ({
   onFriendsRefresh,
   panelClassName = "lobby-panel",
 }) => {
+  // Controls whether the panel displays friends or incoming requests
   const [activeTab, setActiveTab] = useState<"friends" | "requests">("friends");
+
+  // Tracks the request currently being accepted or rejected
   const [processingId, setProcessingId] = useState<number | null>(null);
+
+  // Tracks which friend's DM room is currently being opened
   const [openingDmId, setOpeningDmId] = useState<number | null>(null);
 
-  // roomId -> friendId mapping for subscriptions
+  // Maps DM room ids to friend ids for unread message tracking
   const roomToFriend = useRef<Map<number, number>>(new Map());
-  // friendId -> roomId mapping
+
+  // Maps friend ids to DM room ids for reconnect/resubscribe logic
   const friendToRoom = useRef<Map<number, number>>(new Map());
-  // active subscriptions by roomId
+
+  // Stores active STOMP subscriptions by room id so they can be cleaned up
   const subs = useRef<Map<number, StompSubscription>>(new Map());
 
+  // Tracks unread message counts by friend id
   const [unread, setUnread] = useState<Map<number, number>>(new Map());
+  // Stores the currently open direct-message chat
   const [activeDm, setActiveDm] = useState<DmState | null>(null);
+  // Tracks the active room id without causing rerenders
   const activeDmRoomId = useRef<number | null>(null);
+  // Stores whether the STOMP/WebSocket client is currently connected
   const stompReady = useRef(isConnected());
 
+  /**
+   * 
+   * Subscribes to a direct-message room.
+   * 
+   * If a message arrives while the room is not actively open, the unread
+   * counter for that friend is increased.
+   */
   const subscribeToRoom = useCallback((roomId: number, friendId: number) => {
     if (subs.current.has(roomId)) return;
     try {
       const sub = subscribe(`/topic/dm/${roomId}`, () => {
+        // Do not count messages as unread if the chat room is currently open
         if (activeDmRoomId.current === roomId) return;
         setUnread(prev => {
           const next = new Map(prev);
@@ -60,7 +90,11 @@ const FriendsPanel: React.FC<Props> = ({
     } catch { }
   }, []);
 
-  // Re-subscribe when STOMP reconnects
+  /**
+   * Re-subscribes to known DM rooms when STOMP reconnects.
+   * 
+   * Also cleans up active subscriptions when the component unmounts.
+   */
   useEffect(() => {
     const onReady = () => {
       stompReady.current = true;
@@ -77,12 +111,20 @@ const FriendsPanel: React.FC<Props> = ({
     };
   }, [subscribeToRoom]);
 
+  /**
+   * 
+   * Opens or creates a direct-message room with a friend
+   * 
+   * The backend returns the room id and message history.
+   * The room is then subscribed to for unread message tracking.
+   */
   const handleOpenDm = async (friend: UserResponse) => {
     setOpeningDmId(friend.id);
     try {
       const dm = await getOrCreateDmRoom(friend.id);
       const roomId = dm.roomId;
 
+      // Store room/friend relationships for subscriptions and unread tracking
       friendToRoom.current.set(friend.id, roomId);
       roomToFriend.current.set(roomId, friend.id);
 
@@ -90,6 +132,7 @@ const FriendsPanel: React.FC<Props> = ({
         subscribeToRoom(roomId, friend.id);
       }
 
+      // Opening a DM clears unread messages for that friend
       setUnread(prev => {
         const next = new Map(prev);
         next.delete(friend.id);
@@ -104,11 +147,19 @@ const FriendsPanel: React.FC<Props> = ({
     }
   };
 
+  /**
+   * Closes the active direct-message panel.
+   */
   const handleCloseDm = () => {
     activeDmRoomId.current = null;
     setActiveDm(null);
   };
 
+  /**
+   * Accepts an incoming friend request.
+   * 
+   * After accepting, the request is removed and the friends list is refreshed.
+   */
   const handleAccept = async (friendship: FriendshipDto) => {
     setProcessingId(friendship.id);
     try {
@@ -121,6 +172,11 @@ const FriendsPanel: React.FC<Props> = ({
     }
   };
 
+  /**
+   * Rejects an incoming friend request.
+   * 
+   * After rejecting, the request is removed from the pending list.
+   */
   const handleReject = async (friendship: FriendshipDto) => {
     setProcessingId(friendship.id);
     try {
@@ -134,6 +190,7 @@ const FriendsPanel: React.FC<Props> = ({
 
   return (
     <>
+    {/* Header tabs switch between friends and pending requests */}
       <div className={panelClassName}>
         <div className="panel-header">
           <div className="friends-tabs">
@@ -159,9 +216,11 @@ const FriendsPanel: React.FC<Props> = ({
         <div className="panel-body">
           {activeTab === "friends" && (
             <>
+            {/* Empty state when user has no friends */}
               {friends.length === 0 && (
                 <div className="panel-empty">no friends yet</div>
               )}
+              {/* Friends list with profile links, online status, avatars, and DM button */}
               {friends.map((f) => {
                 const badge = unread.get(f.id) ?? 0;
                 return (
@@ -178,6 +237,7 @@ const FriendsPanel: React.FC<Props> = ({
                       disabled={openingDmId === f.id}
                     >
                       {openingDmId === f.id ? "..." : "message"}
+                      {/* Unread badge appears when messages arrive while DM is closed */}
                       {badge > 0 && (
                         <span className="friends-badge" style={{ position: "absolute", top: -6, right: -6 }}>
                           {badge}
@@ -192,13 +252,16 @@ const FriendsPanel: React.FC<Props> = ({
 
           {activeTab === "requests" && (
             <>
+              {/* Empty state when there are no pending friend requests */}
               {pendingRequests.length === 0 && (
                 <div className="panel-empty">no pending requests</div>
               )}
+              {/* Incoming friend requests with accept/reject actions */}
               {pendingRequests.filter((f) => f.user != null).map((f) => (
                 <div key={f.id} className="challenge-row">
                   <span className="challenge-from">{f.user.username}</span>
                   <div style={{ display: "flex", gap: 4 }}>
+                    {/* Accept request and refresh friends list */}
                     <button
                       className="btn btn-amber"
                       style={{ padding: "4px 10px", fontSize: 11 }}
@@ -207,6 +270,7 @@ const FriendsPanel: React.FC<Props> = ({
                     >
                       {processingId === f.id ? "..." : "accept"}
                     </button>
+                    {/* Reject request and remove it from pending list */}
                     <button
                       className="btn btn-outline"
                       style={{ padding: "4px 10px", fontSize: 11, color: "#ff5555", borderColor: "#ff5555" }}
@@ -222,7 +286,7 @@ const FriendsPanel: React.FC<Props> = ({
           )}
         </div>
       </div>
-
+      {/* Direct chat modal shown when a friend conversation is opened */}
       {activeDm && (
         <DirectChatPanel
           roomId={activeDm.roomId}

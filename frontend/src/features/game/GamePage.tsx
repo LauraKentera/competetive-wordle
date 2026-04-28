@@ -36,37 +36,80 @@ const Avatar: React.FC<{ username: string; size?: number; highlight?: boolean }>
   </div>
 );
 
+/**
+ * GamePage component
+ * 
+ * Main page for an active Wordle match.
+ * Responsibilities:
+ * Load game data from the backend
+ * Maintain live game state through STOMP/WebSocket updates
+ * Use polling as a fallback while the game is active
+ * Handle accepting challenges, forfeiting, leaving, and rematches
+ * Display both players' boards and the game chat
+ */
+
 const GamePage: React.FC = () => {
+
+  // Get game id from the URL route parameter
   const { gameId: gameIdParam } = useParams();
+
+  // Current authenticated user and token are needed for game permissions and WebSocket connection
   const { user, token } = useAuth();
+
+  // Hook used to navigate to another route after login
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Main game state returned by the backend
   const [game, setGame] = useState<GameState | null>(null);
+
+  // UI state for loading, errors, and player actions
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isAccepting, setIsAccepting] = useState(false);
   const [isForfeiting, setIsForfeiting] = useState(false);
   const [showForfeitConfirm, setShowForfeitConfirm] = useState(false);
+
+  // Stores an incoming rematch challenge received through the user challenge queue
   const [incomingChallenge, setIncomingChallenge] = useState<ChallengeDto | null>(null);
+
+  // Rematch-related UI state
   const [isRematching, setIsRematching] = useState(false);
   const [rematchRequested, setRematchRequested] = useState(false);
   const [rematchGameId, setRematchGameId] = useState<number | null>(null);
+
+  // Player usernames are resolved separately from ids so the UI can show names instead of raw ids
   const [playerOneUsername, setPlayerOneUsername] = useState<string>("");
   const [playerTwoUsername, setPlayerTwoUsername] = useState<string>(location.state?.opponentName || "");
+
+  // Tracks whether the opponent has left the current game session
   const [opponentLeft, setOpponentLeft] = useState(false);
+
+  // Subscription refs allow cleanup of STOMP subscriptions when component unmounts or game changes
   const gameSubRef = useRef<StompSubscription | null>(null);
   const presenceSubRef = useRef<StompSubscription | null>(null);
   const challengeSubRef = useRef<StompSubscription | null>(null);
 
+  /**
+   * Converts the route parameter into a valid numeric game id.
+   * If the URL contains an invalid id, gameId becomes null.
+   */
   const gameId = useMemo(() => {
     const p = Number(gameIdParam);
     return Number.isFinite(p) ? p : null;
   }, [gameIdParam]);
 
+  // Tracks whether the STOMP/WebSocket connection is ready
   const stompReadyRef = useRef(false);
   const [stompReady, setStompReady] = useState(isConnected());
 
+  /**
+   * 
+   * Initializes the STOMP/WebSocket connection.
+   * 
+   * The token is used to authenticate the socket connection.
+   * Once connected, stompReady is set so the page can safely subscribe to topics.
+   */
   useEffect(() => {
     if (!token) return;
     const onReady = () => {
@@ -82,7 +125,13 @@ const GamePage: React.FC = () => {
     };
   }, [token]);
 
-  // ── STOMP: subscribe to game topic ──────────────────────────────────────────
+  /**
+   * 
+   * Subscribes to live game updates.
+   * 
+   * Whenever the backend broadcasts an updated game state, the local game state
+   * is replaced so the board, turn status, and winner information stay current.
+   */
   useEffect(() => {
     if (!stompReady || !gameId) return;
     let sub: StompSubscription | null = null;
@@ -91,12 +140,23 @@ const GamePage: React.FC = () => {
         try {
           const updated = JSON.parse(msg.body) as GameState;
           setGame(updated);
-        } catch { }
+        } catch { 
+          // Ignore malformed WebSocket payloads to avoid crashing the page
+        }
       });
-    } catch { }
+    } catch { 
+      // Subscription errors are ignored here because REST polling still acts as fallback
+    }
     return () => { sub?.unsubscribe(); sub = null; };
   }, [stompReady, gameId]);
 
+  /**
+   * 
+   * Subscribes to presence updates for the current game.
+   * 
+   * Used to detect when the opponent leaves the game so the UI can disable
+   * rematch options or show an appropriate status message.
+   */
   useEffect(() => {
     if (!stompReady || !gameId) return;
     let sub: StompSubscription | null = null;
@@ -105,12 +165,17 @@ const GamePage: React.FC = () => {
       sub = subscribe(`/topic/game/${gameId}/presence`, (msg) => {
         try {
           const data = JSON.parse(msg.body);
+          // Ignore presence events from the current user
           if (data.userId !== user?.id) {
             setOpponentLeft(data.status === "LEFT");
           }
-        } catch { }
+        } catch { 
+          // Ignore malformed presence messages
+        }
       });
-    } catch { }
+    } catch { 
+      // Ignore failed presence subscription
+    }
 
     return () => {
       sub?.unsubscribe();
@@ -118,7 +183,14 @@ const GamePage: React.FC = () => {
     };
   }, [stompReady, gameId, user?.id]);
 
-  // ── STOMP: subscribe to user challenge queue ─────────────────────────────────
+  /**
+   * 
+   * Subscribes to the private user challenge queue.
+   * 
+   * This is mainly used for rematch flow:
+   * If opponent declines, return to lobby or
+   * if opponent sends a rematch challenge, show accept/decline controls.
+   */
   useEffect(() => {
     if (!stompReady) return;
 
@@ -135,7 +207,9 @@ const GamePage: React.FC = () => {
           return;
         }
         setIncomingChallenge(data as ChallengeDto);
-      } catch { }
+      } catch { 
+        // Ignore malformed challenge messages
+      }
     });
 
     return () => {
@@ -144,7 +218,13 @@ const GamePage: React.FC = () => {
     };
   }, [stompReady, navigate]);
 
-  // ── REST: load game ──────────────────────────────────────────────────────────
+  /**
+   * 
+   * Loads the current game using the REST API.
+   * 
+   * This is used for initial page load and as a reliable fallback whenever
+   * WebSocket updates may be delayed or missed.
+   */
   const loadGame = useCallback(async (showSpinner = false) => {
     if (gameId === null) { setErrorMessage("Invalid game id."); setIsLoading(false); return null; }
     if (showSpinner) setIsLoading(true);
@@ -159,9 +239,17 @@ const GamePage: React.FC = () => {
     }
   }, [gameId]);
 
+  // Load game data when the page first opens or when the game id changes
   useEffect(() => { void loadGame(true); }, [loadGame]);
 
-  // ── Polling — always on while game is active ─────────────────────────────────
+  
+  /**
+   * 
+   * Polls the game while it is active.
+   * 
+   * This gives the UI a fallback update mechanism in case WebSocket events
+   * are missed or delayed.
+   */
   const { game: polled, error: pollErr } = useGamePolling(
     gameId,
     game?.status === "IN_PROGRESS" || game?.status === "WAITING_FOR_PLAYER"
@@ -169,7 +257,9 @@ const GamePage: React.FC = () => {
   useEffect(() => { if (polled) setGame(polled as GameState); }, [polled]);
   useEffect(() => { if (pollErr) setErrorMessage(pollErr); }, [pollErr]);
 
-  // ── Reset rematch state when game changes ────────────────────────────────────
+  /**
+   * Resets temporary rematch and presence state when navigating to a different game.
+   */
   useEffect(() => {
     setIncomingChallenge(null);
     setRematchRequested(false);
@@ -177,7 +267,9 @@ const GamePage: React.FC = () => {
     setOpponentLeft(false);
   }, [gameId]);
 
-  // ── Resolve player usernames ─────────────────────────────────────────────────
+  /**
+   *  Resolves player one username from the user id stored in the game object.
+   */
   useEffect(() => {
     if (game?.playerOneId && !playerOneUsername) {
       userApi.getUserById(game.playerOneId)
@@ -186,6 +278,13 @@ const GamePage: React.FC = () => {
     }
   }, [game?.playerOneId]);
 
+  /**
+   * 
+   * Resolves player two username.
+   * 
+   * If playerTwoId is not available yet, challengedUserId is used while the game
+   * is still waiting for the challenged player to accept.
+   */
   useEffect(() => {
     const targetId = game?.playerTwoId ?? game?.challengedUserId;
     if (targetId && !playerTwoUsername) {
@@ -195,7 +294,11 @@ const GamePage: React.FC = () => {
     }
   }, [game?.playerTwoId, game?.challengedUserId]);
 
-  // ── Poll rematch game until accepted or declined ─────────────────────────────
+  /**
+   * Polls a newly created rematch game until the opponent accepts or declines.
+   * 
+   * Once accepted, the user is redirected to the new game.
+   */
   useEffect(() => {
     if (!rematchGameId) return;
     let active = true;
@@ -214,27 +317,43 @@ const GamePage: React.FC = () => {
     return () => { active = false; window.clearInterval(interval); };
   }, [rematchGameId, navigate]);
 
-  // ── Derived state ────────────────────────────────────────────────────────────
+  /*
+   * Derived game state used to simplify rendering and button permissions.
+   */
   const isInProgress = game?.status === "IN_PROGRESS";
   const isPending = game?.status === "WAITING_FOR_PLAYER";
   const isDeclined = game?.status === "DECLINED";
   const isCompleted = game?.status === "COMPLETED";
+
+  // Only the challenged user can accept a pending game
   const canAccept = Boolean(game && user && isPending && game.playerTwoId === null && game.playerOneId !== user.id);
+
+  // Determines whether the current user can submit a guess
   const isMyTurn = Boolean(isInProgress && game?.currentTurnPlayerId === user?.id);
+
+  // Current user's guesses determine the next attempt number
   const myGuesses = game?.guesses.filter(g => g.playerId === user?.id) ?? [];
   const nextAttempt = (myGuesses[myGuesses.length - 1]?.attemptNumber ?? 0) + 1;
+
+  // Determines opponent id based on whether current user is player one or player two
   const opponentId = game
     ? game.playerOneId === user?.id ? (game.playerTwoId ?? game.challengedUserId) : game.playerOneId
     : null;
   const myUsername = user?.username ?? "";
   const opponentUsername = game?.playerOneId === user?.id ? playerTwoUsername : playerOneUsername;
+
+  // Winner display values for the game-over modal
   const iWon = game?.winnerId === user?.id;
   const theyWon = game?.winnerId != null && game?.winnerId !== user?.id;
   const winnerLabel = game?.winnerId == null ? "it's a draw" : iWon ? "you won!" : "you lost";
   const winnerColor = game?.winnerId == null ? "var(--text-muted)" : iWon ? "var(--accent)" : "var(--red)";
+
+  // Revealed solution after game completion
   const solution = game?.answer?.toUpperCase() ?? null;
 
-  // ── Handlers ─────────────────────────────────────────────────────────────────
+  /**
+   * Accepts a pending challenge and reloads the game state.
+   */
   const handleAccept = async () => {
     if (!gameId) return;
     setIsAccepting(true);
@@ -243,8 +362,14 @@ const GamePage: React.FC = () => {
     finally { setIsAccepting(false); }
   };
 
+  /**
+   * Opens the confirmation modal before forfeiting.
+   */
   const handleForfeit = () => { if (gameId) setShowForfeitConfirm(true); };
 
+  /**
+   * Confirms forfeit action and updates game state.
+   */
   const confirmForfeit = async () => {
     setShowForfeitConfirm(false);
     if (!gameId) return;
@@ -254,6 +379,9 @@ const GamePage: React.FC = () => {
     finally { setIsForfeiting(false); }
   };
 
+  /**
+   * Sends a rematch challenge to the opponent.
+   */
   const handleRematch = async () => {
     if (!opponentId) return;
     setIsRematching(true);
@@ -266,6 +394,9 @@ const GamePage: React.FC = () => {
     } finally { setIsRematching(false); }
   };
 
+  /**
+   * Accepts an incoming rematch challenge and navigates to the new game.
+   */
   const handleAcceptRematch = async () => {
     if (!incomingChallenge) return;
     try {
@@ -277,6 +408,9 @@ const GamePage: React.FC = () => {
     }
   };
 
+  /**
+   * Declines an incoming rematch challenge and returns to the lobby.
+   */
   const handleDeclineRematch = async () => {
     if (!incomingChallenge) return;
     try {
@@ -288,6 +422,13 @@ const GamePage: React.FC = () => {
     }
   };
 
+  /**
+   * 
+   * Optimistically updates local game state after a guess is submitted.
+   * 
+   * The game is then reloaded from the backend to ensure the frontend matches
+   * the authoritative server state. 
+   */
   const handleGuessSubmitted = async (guess: GuessDto, result: GuessResult) => {
     setGame(cur => {
       if (!cur) return cur;
@@ -303,6 +444,9 @@ const GamePage: React.FC = () => {
     await loadGame();
   };
 
+  /**
+   * Notifies backend that the user left the game, then returns to lobby.
+   */
   const handleLeaveGame = () => {
     if (gameId) {
       publish(`/app/game/${gameId}/leave`, {});
@@ -310,8 +454,9 @@ const GamePage: React.FC = () => {
     navigate("/lobby");
   };
 
-  // ── Render ───────────────────────────────────────────────────────────────────
+  // Show loading spinner while the game data is being fetched
   if (isLoading) return <Spinner />;
+  // Fallback screen if the game could not be loaded or does not exist
   if (!game) return (
     <div className="game-shell">
       <div className="game-main" style={{ padding: 20 }}>
@@ -320,11 +465,12 @@ const GamePage: React.FC = () => {
     </div>
   );
 
-  // Waiting / declined screen (challenger side)
+  // Waiting / declined screen shown only to the player who created the challenge
   if ((isPending || isDeclined) && game.playerOneId === user?.id) {
     const opponentLabel = playerTwoUsername || "the opponent";
     return (
       <div className="game-shell" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {/* Centered card used for pending or declined challenge status */}
         <div style={{
           width: "100%", maxWidth: 480, padding: "60px 40px",
           background: "var(--bg-panel)", border: "1px solid var(--border-strong)",
@@ -332,6 +478,7 @@ const GamePage: React.FC = () => {
         }}>
           {isDeclined ? (
             <>
+              {/* Declined challenge message */}
               <div style={{ fontSize: 48, marginBottom: 16 }}>✕</div>
               <h2 style={{ fontSize: 24, marginBottom: 12, color: "var(--text)" }}>challenge declined</h2>
               <p style={{ color: "var(--text-muted)", marginBottom: 28 }}>
@@ -343,6 +490,7 @@ const GamePage: React.FC = () => {
             </>
           ) : (
             <>
+              {/* Pending challenge message while waiting for opponent response */}
               <h2 style={{ fontSize: 22, marginBottom: 10, color: "var(--text)" }}>waiting for response</h2>
               <p style={{ color: "var(--text-muted)", marginBottom: 24 }}>
                 challenging <strong style={{ color: "var(--text)" }}>{opponentLabel}</strong>...
@@ -360,7 +508,7 @@ const GamePage: React.FC = () => {
 
   return (
     <div className="game-shell" style={{ position: "relative" }}>
-
+      {/* Confirmation modal shown before the user forfeits the match */}
       {showForfeitConfirm && (
         <ConfirmModal
           title="forfeit game"
@@ -372,7 +520,7 @@ const GamePage: React.FC = () => {
         />
       )}
 
-      {/* ── Game over modal ── */}
+      {/* Game over modal showing result, answer, winner, and rematch controls */}
       {isCompleted && (
         <div style={{
           position: "absolute", inset: 0, background: "rgba(0,0,0,0.82)",
@@ -383,13 +531,14 @@ const GamePage: React.FC = () => {
             borderRadius: "var(--radius-lg)", padding: "36px 40px",
             display: "flex", flexDirection: "column", alignItems: "center", gap: 24, minWidth: 340,
           }}>
-            {/* Players */}
+            {/* Displays both players and highlights the winner */}
             <div style={{ display: "flex", alignItems: "center", gap: 20, width: "100%" }}>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flex: 1 }}>
                 <Avatar username={myUsername} size={56} highlight={iWon} />
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: iWon ? "var(--accent)" : "var(--text-muted)", fontWeight: iWon ? 700 : 400 }}>{myUsername}</span>
                 {iWon && <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, background: "var(--accent-dim)", color: "var(--accent)", border: "1px solid var(--accent-border)", padding: "2px 8px", borderRadius: 20 }}>winner</span>}
               </div>
+              {/* Central result label and revealed solution */}
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
                 <div style={{ fontFamily: "var(--font-mono)", fontSize: 28, fontWeight: 700, color: winnerColor }}>{winnerLabel}</div>
                 {solution && (
@@ -398,6 +547,7 @@ const GamePage: React.FC = () => {
                   </div>
                 )}
               </div>
+              {/* Rematch status and controls */}
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flex: 1 }}>
                 <Avatar username={opponentUsername || "?"} size={56} highlight={theyWon} />
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: theyWon ? "var(--red)" : "var(--text-muted)", fontWeight: theyWon ? 700 : 400 }}>{opponentUsername || "opponent"}</span>
@@ -431,6 +581,7 @@ const GamePage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Rematch buttons change depending on whether a request was sent or received */}
               <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
                 {incomingChallenge ? (
                   <>
@@ -465,7 +616,7 @@ const GamePage: React.FC = () => {
         </div>
       )}
 
-      {/* ── Game main ── */}
+      {/* Main game area containing header, boards, and guess input */}
       <div className="game-main">
         <div className="game-header">
           <span className="game-title">game #{game.id}</span>
@@ -477,6 +628,7 @@ const GamePage: React.FC = () => {
                     ? "opponent left the game"
                     : isMyTurn ? "your turn" : "opponent's turn"}
                 </span>
+                {/* Accept button appears only for the challenged player */}
                 <button className="btn btn-danger" style={{ fontSize: 11 }} onClick={handleForfeit} disabled={isForfeiting}>
                   {isForfeiting ? "..." : "forfeit"}
                 </button>
@@ -498,18 +650,21 @@ const GamePage: React.FC = () => {
         </div>
 
         <div className="game-board-area">
+          {/* Displays API or polling errors without removing the current game UI */}
           {errorMessage && <div className="banner-error" style={{ width: "100%", maxWidth: 720 }}>{errorMessage}</div>}
           <div className="dual-board-container">
             <div className="board-section">
               <div className="board-section-label">your board</div>
               <WordleBoard guesses={game.guesses} currentUserId={user?.id ?? -1} />
             </div>
+            {/* Player board comparison: current user's board and opponent's board */}
             <div className="dual-board-divider" />
             <div className="board-section">
               <div className="board-section-label">{opponentUsername ? `${opponentUsername}'s board` : "opponent's board"}</div>
               <WordleBoard guesses={game.guesses} currentUserId={opponentId ?? -1} concealed={!isCompleted} />
             </div>
           </div>
+           {/* Guess input only appears while game is active and user is authenticated */}
           {isInProgress && user && (
             <div style={{ width: "100%", maxWidth: 340 }}>
               <GuessInput
@@ -524,7 +679,7 @@ const GamePage: React.FC = () => {
           )}
         </div>
       </div>
-
+      {/* Game chat is rendered only after WebSocket is ready */}
       {gameIdParam && stompReady && <GameChatPanel gameId={gameIdParam} />}
     </div>
   );
