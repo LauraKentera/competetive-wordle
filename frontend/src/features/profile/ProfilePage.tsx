@@ -8,6 +8,7 @@ import Avatar from "../../components/ui/Avatar";
 import AvatarPicker from "../../components/ui/AvatarPicker";
 import FriendsPanel from "../lobby/FriendsPanel";
 import { useAuth } from "../../auth";
+import { connect, disconnect } from "../../ws/stompClient";
 import { FriendshipDto, UserResponse } from "../../types/api";
 
 import { UserStatus } from "../../types/domain";
@@ -27,7 +28,7 @@ const statusLabel = (status: UserStatus): string => {
 };
 
 const ProfilePage: React.FC = () => {
-  const { user: currentUser, updateUser } = useAuth();
+  const { user: currentUser, token, updateUser } = useAuth();
   const { userId } = useParams();
 
   const parsedUserId = useMemo(() => {
@@ -50,6 +51,12 @@ const ProfilePage: React.FC = () => {
   const [pendingRequests, setPendingRequests] = useState<FriendshipDto[]>([]);
 
   const isMe = Boolean(currentUser && parsedUserId !== null && currentUser.id === parsedUserId);
+
+  useEffect(() => {
+    if (!token) return;
+    connect(token);
+    return () => disconnect();
+  }, [token]);
 
   useEffect(() => {
     const load = async () => {
