@@ -12,6 +12,12 @@ interface Props {
   friends: UserResponse[];
 }
 
+/**
+ * 
+ * OnlinePlayersPanel component
+ * @param param0 
+ * @returns 
+ */
 const OnlinePlayersPanel: React.FC<Props> = ({ players, friends }) => {
   const { user } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);

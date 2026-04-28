@@ -22,6 +22,9 @@ interface LayoutDmContext {
   clearUnreadDmForUsername: (username: string) => void;
 }
 
+/** 
+ * Converts backend user status values into display-friendly labels.
+ */
 const statusLabel = (status: UserStatus): string => {
   switch (status) {
     case "ONLINE":
@@ -34,40 +37,78 @@ const statusLabel = (status: UserStatus): string => {
   }
 };
 
+/**
+ * 
+ * ProfilePage component
+ * 
+ * Displays a user's profile, stats, avatar, and friend-related actions.
+ * Responsibilities:
+ * Load profile data based on route user id
+ * Show user game statistics
+ * Allow the current user to update their avatar
+ * Allow friend requests, friend removal, and direct messaging
+ * Show the current user's friends and pending friend requests
+ * Listen for live friend request updates through WebSocket
+ */
 const ProfilePage: React.FC = () => {
+  // Current authenticated user and auth helpers from context
   const { user: currentUser, updateUser, token } = useAuth();
+  // User id from the route
   const { userId } = useParams();
   const layoutDmContext = useOutletContext<LayoutDmContext>();
 
+  // Active direct-message room shown when messaging a friend
   const [activeDm, setActiveDm] = useState<{ roomId: number; initialMessages: ChatMessageDto[] } | null>(null);
+  // Tracks whether a DM room is currently being opened
   const [openingDm, setOpeningDm] = useState(false);
 
+  /**
+   * Parses the route user id into a number.
+   * 
+   * If the route parameter is invalid, parsedUserId becomes null.
+   */
   const parsedUserId = useMemo(() => {
     const n = Number(userId);
     return Number.isFinite(n) ? n : null;
   }, [userId]);
 
+  // Profile user being viewed
   const [user, setUser] = useState<UserResponse | null>(null);
+  // Page loading and error state
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Avatar update state
   const [isSavingAvatar, setIsSavingAvatar] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
 
+  // Friend action state for viewing another user's profile
   const [friendStatus, setFriendStatus] = useState<FriendStatus>("none");
   const [friendAction, setFriendAction] = useState(false);
   const [friendError, setFriendError] = useState<string | null>(null);
 
+  // Data used by FriendsPanel when viewing own profile
   const [friends, setFriends] = useState<UserResponse[]>([]);
   const [pendingRequests, setPendingRequests] = useState<FriendshipDto[]>([]);
 
+  // Determines whether the profile belongs to the current logged-in user
   const isMe = Boolean(currentUser && parsedUserId !== null && currentUser.id === parsedUserId);
 
+  /**
+   * Refreshes friends and pending friend requests.
+   * 
+   * Used after accepting/rejecting requests and when WebSocket notifications arrive.
+   */
   const refreshFriendData = useCallback(() => {
     getFriends().then(setFriends).catch(() => { });
     getPendingRequests().then(setPendingRequests).catch(() => { });
   }, []);
 
+  /**
+   * Subscribes to private friend request updates for the current user's profile.
+   * 
+   * This keeps the friends panel updated when new requests arrive in real time.
+   */
   useEffect(() => {
     if (!token || !isMe) return;
 
@@ -93,6 +134,12 @@ const ProfilePage: React.FC = () => {
     };
   }, [token, isMe, refreshFriendData]);
 
+  /**
+   * Loads profile data.
+   * 
+   * If viewing own profile, also loads friends and pending requests.
+   * If viewing another user's profile, checks whether they are already a friend.
+   */
   useEffect(() => {
     const load = async () => {
       if (parsedUserId === null) {
@@ -120,6 +167,7 @@ const ProfilePage: React.FC = () => {
             getFriends(),
           ]);
           setUser(u);
+          // Determine whether viewed user is already a friend
           const match = friendsList.find((f) => f.id === parsedUserId);
           if (match) setFriendStatus("friends");
         }
@@ -134,6 +182,9 @@ const ProfilePage: React.FC = () => {
     void load();
   }, [parsedUserId, isMe]);
 
+  /**
+   * Calculates win rate from profile statistics.
+   */
   const winRate = useMemo(() => {
     const played = user?.gamesPlayed ?? 0;
     const won = user?.gamesWon ?? 0;
@@ -141,6 +192,13 @@ const ProfilePage: React.FC = () => {
     return `${((won / played) * 100).toFixed(1)}%`;
   }, [user?.gamesPlayed, user?.gamesWon]);
 
+  /**
+   * 
+   * Updates the current user's avatar.
+   * 
+   * The returned user is saved both locally and in AuthContext so other
+   * parts of the app can immediately reflect the new avatar.
+   */
   const handleAvatarSelect = async (avatarId: 1 | 2 | 3) => {
     if (!isMe || !user) return;
     if ((user.avatarId ?? 1) === avatarId) return;
@@ -159,6 +217,9 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  /**
+   * Sends a friend request to the viewed user.
+   */
   const handleSendFriendRequest = async () => {
     if (!parsedUserId) return;
     setFriendAction(true);
@@ -173,6 +234,9 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  /**
+   * Removes the viewed user from the current user's friend list.
+   */
   const handleRemoveFriend = async () => {
     if (!parsedUserId) return;
     setFriendAction(true);
@@ -187,10 +251,16 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  /**
+   * Removes a handled friend request from the pending list.
+   */
   const handleRequestHandled = (friendshipId: number) => {
     setPendingRequests((prev) => prev.filter((r) => r.id !== friendshipId));
   };
 
+  /**
+   * Refreshes friends after accepting a request.
+   */
   const handleFriendsRefresh = async () => {
     try {
       const fr = await getFriends();
@@ -198,6 +268,9 @@ const ProfilePage: React.FC = () => {
     } catch { }
   };
 
+  /**
+   * Opens or creates a direct-message room with the viewed user.
+   */
   const handleOpenDm = async () => {
     if (!parsedUserId) return;
     setOpeningDm(true);
@@ -212,8 +285,10 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  // Show loading spinner while profile data is being fetched
   if (isLoading) return <Spinner />;
 
+  // Error or fallback state when profile cannot be loaded
   if (errorMessage || !user) {
     return (
       <div className="profile-shell">
@@ -227,6 +302,7 @@ const ProfilePage: React.FC = () => {
   return (
     <div className="profile-shell">
       <div className="profile-card">
+        {/* Profile header showing avatar, username, status, and friend actions */}
         <div className="profile-header">
           <div className="profile-header-left">
             <Avatar avatarId={user.avatarId ?? 1} size="lg" username={user.username} />
@@ -238,6 +314,7 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
 
+          {/* Friend and DM actions are only shown when viewing another user's profile */}
           {!isMe && (
             <div className="profile-friend-actions">
               {friendStatus === "none" && (
@@ -273,6 +350,7 @@ const ProfilePage: React.FC = () => {
                   </button>
                 </>
               )}
+              {/* Displays friend action errors */}
               {friendError && (
                 <div className="banner-error" style={{ marginTop: 8 }}>
                   {friendError}
@@ -316,6 +394,7 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
 
+          {/* Avatar picker is only shown on the current user's own profile */}
           {isMe && (
             <div className="profile-panel">
               <div className="panel-header">
@@ -342,6 +421,7 @@ const ProfilePage: React.FC = () => {
             </div>
           )}
 
+          {/* Friends panel is only shown on the current user's own profile */}
           {isMe && (
             <div style={{ gridColumn: "1 / -1" }}>
               <FriendsPanel
@@ -357,6 +437,7 @@ const ProfilePage: React.FC = () => {
           )}
         </div>
       </div>
+      {/* Direct message modal shown when messaging a friend from their profile */}
       {activeDm && user && (
         <DirectChatPanel
           roomId={activeDm.roomId}
