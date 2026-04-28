@@ -2,6 +2,7 @@ package edu.rit.backend.game.service;
 
 import edu.rit.backend.chat.service.ChatService;
 import edu.rit.backend.game.client.WordApiClient;
+import edu.rit.backend.game.client.WordValidatorClient;
 import edu.rit.backend.game.dto.GameDto;
 import edu.rit.backend.game.dto.GuessDto;
 import edu.rit.backend.game.dto.GuessResult;
@@ -12,6 +13,7 @@ import edu.rit.backend.game.model.Guess;
 import edu.rit.backend.game.repo.GameRepository;
 import edu.rit.backend.game.repo.GuessRepository;
 import edu.rit.backend.lobby.dto.LobbyPlayerDto;
+import edu.rit.backend.user.service.UserStatsService;
 import edu.rit.backend.user.model.UserStatus;
 import edu.rit.backend.user.repo.UserRepository;
 
@@ -31,19 +33,24 @@ public class GameService {
     private final GameRepository gameRepository;
     private final GuessRepository guessRepository;
     private final WordApiClient wordApiClient;
+    private final WordValidatorClient wordValidatorClient;
     private final ChatService chatService;
     private final SimpMessagingTemplate messagingTemplate;
     private final UserRepository userRepository;
+    private final UserStatsService userStatsService;
 
     public GameService(GameRepository gameRepository, GuessRepository guessRepository,
-            WordApiClient wordApiClient, ChatService chatService, SimpMessagingTemplate messagingTemplate,
-            UserRepository userRepository) {
+            WordApiClient wordApiClient, WordValidatorClient wordValidatorClient,
+            ChatService chatService, SimpMessagingTemplate messagingTemplate,
+            UserRepository userRepository, UserStatsService userStatsService) {
         this.gameRepository = gameRepository;
         this.guessRepository = guessRepository;
         this.wordApiClient = wordApiClient;
+        this.wordValidatorClient = wordValidatorClient;
         this.chatService = chatService;
         this.messagingTemplate = messagingTemplate;
         this.userRepository = userRepository;
+        this.userStatsService = userStatsService;
     }
 
     @Transactional
@@ -67,30 +74,14 @@ public class GameService {
     }
 
     private void setPlayersInGame(Long playerOneId, Long playerTwoId) {
-        userRepository.findById(playerOneId).ifPresent(u -> {
-            u.setStatus(UserStatus.IN_GAME);
-            userRepository.save(u);
-        });
-        userRepository.findById(playerTwoId).ifPresent(u -> {
-            u.setStatus(UserStatus.IN_GAME);
-            userRepository.save(u);
-        });
+        userRepository.updateStatus(playerOneId, UserStatus.IN_GAME);
+        userRepository.updateStatus(playerTwoId, UserStatus.IN_GAME);
         broadcastOnlinePlayers();
     }
 
     private void setPlayersOnline(Long playerOneId, Long playerTwoId) {
-        userRepository.findById(playerOneId).ifPresent(u -> {
-            if (u.getStatus() == UserStatus.IN_GAME) {
-                u.setStatus(UserStatus.ONLINE);
-                userRepository.save(u);
-            }
-        });
-        userRepository.findById(playerTwoId).ifPresent(u -> {
-            if (u.getStatus() == UserStatus.IN_GAME) {
-                u.setStatus(UserStatus.ONLINE);
-                userRepository.save(u);
-            }
-        });
+        userRepository.updateStatus(playerOneId, UserStatus.ONLINE);
+        userRepository.updateStatus(playerTwoId, UserStatus.ONLINE);
         broadcastOnlinePlayers();
     }
 
@@ -98,7 +89,7 @@ public class GameService {
         List<LobbyPlayerDto> players = userRepository
                 .findByStatusIn(List.of(UserStatus.ONLINE, UserStatus.IN_GAME))
                 .stream()
-                .map(u -> new LobbyPlayerDto(u.getId(), u.getUsername(), u.getStatus()))
+                .map(u -> new LobbyPlayerDto(u.getId(), u.getUsername(), u.getStatus(), u.getAvatarId()))
                 .toList();
         messagingTemplate.convertAndSend("/topic/lobby/players", players);
     }
@@ -158,6 +149,9 @@ public class GameService {
         if (game.getWordLength() != null && guessWord.length() != game.getWordLength()) {
             throw new IllegalArgumentException("Guess must be " + game.getWordLength() + " letters");
         }
+        if (!wordValidatorClient.isValidWord(guessWord)) {
+            throw new IllegalArgumentException("\"" + guessWord.toUpperCase() + "\" is not a valid word");
+        }
 
         long myGuessCount = guessRepository.findByGameIdOrderByAttemptNumberAsc(gameId).stream()
                 .filter(g -> g.getPlayerId().equals(playerId))
@@ -177,9 +171,12 @@ public class GameService {
         guessRepository.save(guess);
 
         if (correct) {
-            game.setWinnerId(playerId);
+            Long loserId = playerId.equals(game.getPlayerOneId()) ? game.getPlayerTwoId() : game.getPlayerOneId();
             game.endGame(playerId);
             gameRepository.save(game);
+            if (loserId != null) {
+                userStatsService.recordWin(playerId, loserId);
+            }
             setPlayersOnline(game.getPlayerOneId(), game.getPlayerTwoId());
             return new GuessResult(result, true);
         }
@@ -191,6 +188,9 @@ public class GameService {
                 .count();
         if (otherPlayerId != null && otherGuessCount >= game.getMaxAttempts()) {
             game.endGame(null);
+            if (game.getPlayerOneId() != null && game.getPlayerTwoId() != null) {
+                userStatsService.recordDraw(game.getPlayerOneId(), game.getPlayerTwoId());
+            }
             setPlayersOnline(game.getPlayerOneId(), game.getPlayerTwoId());
         }
         gameRepository.save(game);
@@ -252,6 +252,9 @@ public class GameService {
         Long winnerId = playerId.equals(game.getPlayerOneId()) ? game.getPlayerTwoId() : game.getPlayerOneId();
         game.endGame(winnerId);
         gameRepository.save(game);
+        if (winnerId != null) {
+            userStatsService.recordForfeit(playerId, winnerId);
+        }
         setPlayersOnline(game.getPlayerOneId(), game.getPlayerTwoId());
         return toDto(game);
     }
@@ -267,6 +270,9 @@ public class GameService {
             Long winnerId = userId.equals(game.getPlayerOneId()) ? game.getPlayerTwoId() : game.getPlayerOneId();
             game.endGame(winnerId);
             gameRepository.save(game);
+            if (winnerId != null) {
+                userStatsService.recordWin(winnerId, userId);
+            }
             GameDto dto = toDto(game);
             messagingTemplate.convertAndSend("/topic/game/" + game.getId(), dto);
             setPlayersOnline(game.getPlayerOneId(), game.getPlayerTwoId());

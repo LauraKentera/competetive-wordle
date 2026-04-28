@@ -41,7 +41,7 @@ public class LobbyService {
     @Transactional(readOnly = true)
     public List<LobbyPlayerDto> getOnlinePlayers() {
         return userRepository.findByStatus(UserStatus.ONLINE).stream()
-                .map(u -> new LobbyPlayerDto(u.getId(), u.getUsername(), u.getStatus()))
+                .map(u -> new LobbyPlayerDto(u.getId(), u.getUsername(), u.getStatus(), u.getAvatarId()))
                 .toList();
     }
 

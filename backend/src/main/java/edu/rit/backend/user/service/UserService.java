@@ -1,5 +1,6 @@
 package edu.rit.backend.user.service;
 
+import edu.rit.backend.user.dto.UserResponse;
 import edu.rit.backend.user.model.Role;
 import edu.rit.backend.user.model.User;
 import edu.rit.backend.user.repo.UserRepository;
@@ -27,5 +28,14 @@ public class UserService {
             throw new IllegalArgumentException("Username already taken");
         }
         return users.save(new User(username, passwordHash, role));
+    }
+
+    @Transactional
+    public UserResponse updateAvatar(Long userId, int avatarId) {
+        User user = users.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        user.setAvatarId(avatarId);
+        return UserResponse.from(users.save(user));
     }
 }

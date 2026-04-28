@@ -37,7 +37,13 @@ export interface UserResponse {
   username: string;
   role: Role;
   status: UserStatus;
-  lastLogin: string; // Instant -> string
+  lastLogin: string | null; // Instant -> string (nullable)
+  avatarId: number;
+  gamesPlayed: number;
+  gamesWon: number;
+  gamesLost: number;
+  gamesDrawn: number;
+  gamesForfeited: number;
 }
 
 /* =========================
@@ -66,6 +72,11 @@ export interface GameChatSendRequest {
   content: string;
 }
 
+export interface DmRoomDto {
+  roomId: number;
+  messages: ChatMessageDto[];
+}
+
 /* =========================
    LOBBY DTOs
 ========================= */
@@ -74,6 +85,7 @@ export interface LobbyPlayerDto {
   id: number;
   username: string;
   status: UserStatus;
+  avatarId: number;
 }
 
 export interface LobbyChatMessage {
@@ -86,6 +98,19 @@ export interface ChallengeDto {
   gameId: number;
   challengerId: number;
   challengerUsername: string;
+}
+
+/* =========================
+   FRIEND DTOs
+========================= */
+
+export type FriendshipStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "BLOCKED";
+
+export interface FriendshipDto {
+  id: number;
+  user: UserResponse;
+  status: FriendshipStatus;
+  createdAt: string;
 }
 
 /* =========================
