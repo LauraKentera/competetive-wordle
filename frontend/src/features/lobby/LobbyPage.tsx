@@ -59,6 +59,7 @@ const LobbyPage: React.FC = () => {
         return [...prev, challenge];
       });
     },
+    onFriendUpdate: () => getFriends().then(setFriends).catch(() => {}),
   });
 
   if (isLoading) return <Spinner />;

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { userApi } from "../../api/userApi";
 import { getFriends, getPendingRequests, sendFriendRequest, removeFriend } from "../../api/friendApi";
@@ -8,8 +8,11 @@ import Avatar from "../../components/ui/Avatar";
 import AvatarPicker from "../../components/ui/AvatarPicker";
 import FriendsPanel from "../lobby/FriendsPanel";
 import { useAuth } from "../../auth";
-import { connect, disconnect } from "../../ws/stompClient";
+import { connect, disconnect, subscribe, onConnect, offConnect } from "../../ws/stompClient";
 import { FriendshipDto, UserResponse } from "../../types/api";
+import { getOrCreateDmRoom } from "../../api/dmApi";
+import DirectChatPanel from "../chat/DirectChatPanel";
+import { ChatMessageDto } from "../../types/api";
 
 import { UserStatus } from "../../types/domain";
 
@@ -28,8 +31,11 @@ const statusLabel = (status: UserStatus): string => {
 };
 
 const ProfilePage: React.FC = () => {
-  const { user: currentUser, token, updateUser } = useAuth();
+  const { user: currentUser, updateUser, token } = useAuth();
   const { userId } = useParams();
+
+  const [activeDm, setActiveDm] = useState<{ roomId: number; initialMessages: ChatMessageDto[] } | null>(null);
+  const [openingDm, setOpeningDm] = useState(false);
 
   const parsedUserId = useMemo(() => {
     const n = Number(userId);
@@ -52,11 +58,35 @@ const ProfilePage: React.FC = () => {
 
   const isMe = Boolean(currentUser && parsedUserId !== null && currentUser.id === parsedUserId);
 
+  const refreshFriendData = useCallback(() => {
+    getFriends().then(setFriends).catch(() => { });
+    getPendingRequests().then(setPendingRequests).catch(() => { });
+  }, []);
+
   useEffect(() => {
-    if (!token) return;
+    if (!token || !isMe) return;
+
+    const subs: { unsubscribe: () => void }[] = [];
+
+    const doSub = () => {
+      subs.forEach(s => s.unsubscribe());
+      subs.length = 0;
+      try {
+        const sub = subscribe("/user/queue/friend-requests", () => refreshFriendData());
+        subs.push(sub);
+      } catch { }
+    };
+
+    onConnect(doSub);
     connect(token);
-    return () => disconnect();
-  }, [token]);
+
+    return () => {
+      offConnect(doSub);
+      subs.forEach(s => s.unsubscribe());
+      subs.length = 0;
+      disconnect();
+    };
+  }, [token, isMe, refreshFriendData]);
 
   useEffect(() => {
     const load = async () => {
@@ -160,7 +190,20 @@ const ProfilePage: React.FC = () => {
     try {
       const fr = await getFriends();
       setFriends(fr);
-    } catch {}
+    } catch { }
+  };
+
+  const handleOpenDm = async () => {
+    if (!parsedUserId) return;
+    setOpeningDm(true);
+    try {
+      const dm = await getOrCreateDmRoom(parsedUserId);
+      setActiveDm({ roomId: dm.roomId, initialMessages: dm.messages });
+    } catch (err) {
+      console.error("DM error:", err);  // 👈 add this
+    } finally {
+      setOpeningDm(false);
+    }
   };
 
   if (isLoading) return <Spinner />;
@@ -209,10 +252,16 @@ const ProfilePage: React.FC = () => {
                 <>
                   <span className="profile-friends-check">Friends ✓</span>
                   <button
+                    className="btn btn-ghost"
+                    onClick={handleOpenDm}
+                    disabled={openingDm}
+                  >
+                    {openingDm ? "..." : "Message"}
+                  </button>
+                  <button
                     className="btn btn-danger"
                     onClick={handleRemoveFriend}
                     disabled={friendAction}
-                    style={{ marginLeft: 8 }}
                   >
                     {friendAction ? "..." : "Remove Friend"}
                   </button>
@@ -300,6 +349,14 @@ const ProfilePage: React.FC = () => {
           )}
         </div>
       </div>
+      {activeDm && user && (
+        <DirectChatPanel
+          roomId={activeDm.roomId}
+          friendUsername={user.username}
+          initialMessages={activeDm.initialMessages}
+          onClose={() => setActiveDm(null)}
+        />
+      )}
     </div>
   );
 };

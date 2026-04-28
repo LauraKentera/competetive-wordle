@@ -3,7 +3,6 @@ package edu.rit.backend.lobby.websocket;
 import edu.rit.backend.game.service.GameService;
 import edu.rit.backend.lobby.dto.LobbyPlayerDto;
 import edu.rit.backend.lobby.service.LobbyService;
-import edu.rit.backend.user.model.User;
 import edu.rit.backend.user.model.UserStatus;
 import edu.rit.backend.user.repo.UserRepository;
 import org.springframework.context.event.EventListener;

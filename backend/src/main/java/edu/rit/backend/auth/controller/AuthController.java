@@ -7,6 +7,7 @@ import edu.rit.backend.auth.dto.RegistrationTokenResponse;
 import edu.rit.backend.auth.service.AuthService;
 import edu.rit.backend.auth.service.RegistrationTokenService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -29,14 +30,14 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public AuthResponse register(@RequestBody RegisterRequest req, HttpServletRequest request) {
+    public AuthResponse register(@Valid @RequestBody RegisterRequest req, HttpServletRequest request) {
         String clientIp = request.getRemoteAddr();
         String userAgent = request.getHeader("User-Agent");
         return auth.register(req.username(), req.password(), req.registrationToken(), clientIp, userAgent);
     }
 
     @PostMapping("/login")
-    public AuthResponse login(@RequestBody LoginRequest req) {
+    public AuthResponse login(@Valid @RequestBody LoginRequest req) {
         return auth.login(req.username(), req.password());
     }
 }
