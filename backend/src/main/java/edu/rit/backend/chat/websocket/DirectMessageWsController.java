@@ -12,6 +12,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
+import java.util.Map;
 
 @Controller
 public class DirectMessageWsController {
@@ -50,5 +51,17 @@ public class DirectMessageWsController {
         String content = request != null && request.content() != null ? request.content() : "";
         ChatMessageDto dto = chatService.sendMessage(roomId, userId, username, content);
         messagingTemplate.convertAndSend("/topic/dm/" + roomId, dto);
+
+        directMessageService.getOtherMembers(roomId, userId).forEach(member ->
+                messagingTemplate.convertAndSendToUser(
+                        member.getUsername(),
+                        "/queue/dm-notifications",
+                        Map.of(
+                                "type", "DM_MESSAGE",
+                                "fromUsername", username,
+                                "roomId", roomId
+                        )
+                )
+        );
     }
 }
