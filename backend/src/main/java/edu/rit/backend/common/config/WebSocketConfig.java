@@ -1,5 +1,8 @@
 package edu.rit.backend.common.config;
 
+import java.util.Arrays;
+import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -12,9 +15,18 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final WebSocketAuthChannelInterceptor webSocketAuthChannelInterceptor;
+    private final String[] allowedOrigins;
 
-    public WebSocketConfig(WebSocketAuthChannelInterceptor webSocketAuthChannelInterceptor) {
+    public WebSocketConfig(
+            WebSocketAuthChannelInterceptor webSocketAuthChannelInterceptor,
+            @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:5173}") String rawAllowedOrigins
+    ) {
         this.webSocketAuthChannelInterceptor = webSocketAuthChannelInterceptor;
+        List<String> origins = Arrays.stream(rawAllowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isBlank())
+                .toList();
+        this.allowedOrigins = origins.toArray(String[]::new);
     }
 
     @Override
@@ -32,10 +44,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setAllowedOrigins(
-                        "http://localhost:3000",
-                        "http://localhost:5173"
-                )
+                .setAllowedOrigins(allowedOrigins)
                 .withSockJS();
     }
 }

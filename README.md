@@ -19,6 +19,19 @@ STOMP WebSocket client
 ## Infrastructure
 Docker (MySQL containerized for local development)
 
+## Production Deployment (Railway + GitHub)
+
+The recommended and simplest deployment path is documented here:
+
+- `docs/railway-deployment.md`
+
+Use two Railway services from this monorepo:
+
+- `backend` (Dockerfile service)
+- `frontend` (static CRA build service)
+
+with Railway MySQL and Redis plugins.
+
 ## Project Structure
 
 backend/

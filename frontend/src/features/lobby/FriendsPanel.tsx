@@ -20,6 +20,8 @@ interface Props {
   onRequestHandled: (friendshipId: number) => void;
   onFriendsRefresh: () => void;
   panelClassName?: string;
+  unreadByUsername?: Record<string, number>;
+  onClearUnreadForUsername?: (username: string) => void;
 }
 
 /**
@@ -39,6 +41,8 @@ const FriendsPanel: React.FC<Props> = ({
   onRequestHandled,
   onFriendsRefresh,
   panelClassName = "lobby-panel",
+  unreadByUsername = {},
+  onClearUnreadForUsername,
 }) => {
   // Controls whether the panel displays friends or incoming requests
   const [activeTab, setActiveTab] = useState<"friends" | "requests">("friends");
@@ -138,6 +142,7 @@ const FriendsPanel: React.FC<Props> = ({
         next.delete(friend.id);
         return next;
       });
+      onClearUnreadForUsername?.(friend.username);
 
       activeDmRoomId.current = roomId;
       setActiveDm({ roomId, friendUsername: friend.username, initialMessages: dm.messages });
@@ -222,7 +227,9 @@ const FriendsPanel: React.FC<Props> = ({
               )}
               {/* Friends list with profile links, online status, avatars, and DM button */}
               {friends.map((f) => {
-                const badge = unread.get(f.id) ?? 0;
+                const localUnread = unread.get(f.id) ?? 0;
+                const globalUnread = unreadByUsername[f.username] ?? 0;
+                const badge = localUnread + globalUnread;
                 return (
                   <div key={f.id} className="player-row">
                     <Link to={`/profile/${f.id}`} className="player-name player-name-link">

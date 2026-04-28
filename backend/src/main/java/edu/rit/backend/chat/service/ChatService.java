@@ -19,10 +19,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+// Service responsible for chat-related business logic (rooms, messages, caching)
 @Service
 public class ChatService {
 
+    // Prefix used for Redis keys for chat room message lists
     private static final String CACHE_KEY_PREFIX = "chat:room:";
+
+    // Maximum number of messages stored in Redis cache per room
     private static final int CACHE_MAX_MESSAGES = 50;
 
     private final ChatRoomRepository chatRoomRepository;
@@ -43,6 +47,7 @@ public class ChatService {
         this.objectMapper = objectMapper;
     }
 
+    // Creates a chat room for a game if one does not already exist
     @Transactional
     public ChatRoom createRoomForGame(Long gameId) {
         if (chatRoomRepository.findByTypeAndGameId(ChatRoomType.GAME, gameId).isPresent()) {
@@ -52,6 +57,7 @@ public class ChatService {
         return chatRoomRepository.save(room);
     }
 
+    // Retrieves a chat room associated with a specific game
     @Transactional(readOnly = true)
     public Optional<ChatRoom> getRoomForGame(Long gameId) {
         return chatRoomRepository.findByTypeAndGameId(ChatRoomType.GAME, gameId);
@@ -75,6 +81,7 @@ public class ChatService {
         return sendMessage(room.getId(), userId, username, content);
     }
 
+    // Retrieves recent lobby messages with a given limit
     @Transactional(readOnly = true)
     public List<ChatMessageDto> getRecentLobbyMessages(int limit) {
         ChatRoom room = chatRoomRepository.findByType(ChatRoomType.LOBBY).orElse(null);
@@ -82,17 +89,25 @@ public class ChatService {
         return getRecentMessages(room.getId(), limit);
     }
 
+    // Sends a message to a specific chat room, persists it, and updates cache
     @Transactional
     public ChatMessageDto sendMessage(Long chatRoomId, Long userId, String username, String content) {
+        // Validate message content
         if (content == null || content.isBlank()) {
             throw new IllegalArgumentException("Message content is required");
         }
+
+        // Create and save message entity
         Instant now = Instant.now();
         ChatMessage entity = new ChatMessage(chatRoomId, userId, content.trim(), now);
         entity = chatMessageRepository.save(entity);
 
+        // Create DTO for response and broadcasting
         ChatMessageDto dto = new ChatMessageDto(username, content.trim(), now);
+
+        // Store message in Redis cache
         pushToCache(chatRoomId, dto);
+
         return dto;
     }
 
@@ -106,74 +121,102 @@ public class ChatService {
         return sendMessage(room.getId(), userId, username, content);
     }
 
+    // Retrieves recent messages for a chat room, using cache if available
     @Transactional(readOnly = true)
     public List<ChatMessageDto> getRecentMessages(Long chatRoomId, int limit) {
+        // Enforce reasonable limits
         if (limit <= 0) limit = 50;
         if (limit > 100) limit = 100;
 
+        // Try fetching from Redis cache first
         List<ChatMessageDto> fromCache = getFromCache(chatRoomId, limit);
         if (!fromCache.isEmpty()) {
             return fromCache;
         }
 
+        // Fallback to database if cache is empty
         List<ChatMessage> entities = chatMessageRepository.findByChatRoomIdOrderBySentAtAsc(
                 chatRoomId, PageRequest.of(0, limit));
+
         List<ChatMessageDto> result = new ArrayList<>();
+
+        // Convert entities to DTOs and resolve usernames
         for (ChatMessage m : entities) {
             String username = userRepository.findById(m.getUserId())
                     .map(u -> u.getUsername())
                     .orElse("?");
             result.add(new ChatMessageDto(username, m.getMessage(), m.getSentAt()));
         }
+
+        // Repopulate cache with fresh data
         repopulateCache(chatRoomId, result);
+
         return result;
     }
 
+    // Retrieves recent messages for a game-specific chat room
     public List<ChatMessageDto> getRecentGameMessages(Long gameId, int limit) {
         ChatRoom room = getRoomForGame(gameId).orElse(null);
         if (room == null) return List.of();
         return getRecentMessages(room.getId(), limit);
     }
 
+    // Pushes a new message DTO to Redis cache (as JSON)
     private void pushToCache(Long roomId, ChatMessageDto dto) {
         try {
             String key = CACHE_KEY_PREFIX + roomId;
             String json = objectMapper.writeValueAsString(dto);
+
+            // Append message and trim list to max size
             redisTemplate.opsForList().rightPush(key, json);
             redisTemplate.opsForList().trim(key, -CACHE_MAX_MESSAGES, -1);
         } catch (JsonProcessingException e) {
-            // skip cache
+            // Serialization failed – skip cache
         } catch (Exception e) {
             // Redis unavailable – skip cache
         }
     }
 
+    // Retrieves messages from Redis cache and deserializes them
     private List<ChatMessageDto> getFromCache(Long roomId, int limit) {
         try {
             String key = CACHE_KEY_PREFIX + roomId;
+
+            // Get last 'limit' messages from Redis list
             List<String> range = redisTemplate.opsForList().range(key, -limit, -1);
             if (range == null || range.isEmpty()) return List.of();
+
             List<ChatMessageDto> result = new ArrayList<>();
+
+            // Convert JSON strings back to DTOs
             for (String json : range) {
                 result.add(objectMapper.readValue(json, ChatMessageDto.class));
             }
+
             return result;
         } catch (Exception e) {
             return List.of();
         }
     }
 
+    // Rebuilds the Redis cache for a room using a fresh list of messages
     private void repopulateCache(Long roomId, List<ChatMessageDto> messages) {
         try {
             String key = CACHE_KEY_PREFIX + roomId;
+
+            // Clear existing cache
             redisTemplate.delete(key);
+
+            // Insert messages into cache
             for (ChatMessageDto dto : messages) {
                 String json = objectMapper.writeValueAsString(dto);
                 redisTemplate.opsForList().rightPush(key, json);
             }
+
+            // Ensure cache size limit
             redisTemplate.opsForList().trim(key, -CACHE_MAX_MESSAGES, -1);
         } catch (Exception e) {
-            // skip
+            // Skip cache update on failure
         }
     }
 }
