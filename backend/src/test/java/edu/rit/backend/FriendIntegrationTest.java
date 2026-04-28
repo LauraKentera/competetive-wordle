@@ -38,7 +38,7 @@ class FriendIntegrationTest {
         String body = """
                 {
                     "username": "%s",
-                    "password": "test123",
+                    "password": "test1234",
                     "registrationToken": "%s"
                 }
                 """.formatted(username, registrationToken);
