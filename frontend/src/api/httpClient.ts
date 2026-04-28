@@ -1,6 +1,7 @@
 import ENV from '../config/env';
 import { getToken } from '../auth/tokenStorage';
 
+/** Represents a structured API error returned from the backend. */
 export interface ApiError{
     message: string;
     status?: number;
@@ -8,6 +9,12 @@ export interface ApiError{
     errors?: unknown;
 }
 
+/**
+ * Type guard that checks whether an unknown value is an ApiError.
+ *
+ * @param e - The value to check.
+ * @returns True if the value conforms to the ApiError shape.
+ */
 export function isApiError(e: unknown): e is ApiError{
     return(
         typeof e === 'object' &&
@@ -17,6 +24,16 @@ export function isApiError(e: unknown): e is ApiError{
     );
 }
 
+/**
+ * Sends an authenticated HTTP request to the backend API.
+ * Automatically attaches the JWT Bearer token from storage and sets
+ * Content-Type to application/json for mutating requests.
+ *
+ * @param path - The API path to call (e.g. "/api/me").
+ * @param options - Optional fetch RequestInit overrides (method, body, headers, etc.).
+ * @returns A promise that resolves to the parsed response body of type T.
+ * @throws {ApiError} If the response status is not OK.
+ */
 export async function request<T = unknown>(
     path: string,
     options: RequestInit = {}

@@ -16,9 +16,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Sets user status to ONLINE/OFFLINE on WebSocket connect/disconnect and
- * broadcasts
- * the list of online players to /topic/lobby/players.
+ * Spring event listener that tracks WebSocket session lifecycle events.
+ * Sets user status to ONLINE on connect and OFFLINE on disconnect,
+ * and broadcasts the updated online player list to /topic/lobby/players.
  */
 @Component
 public class LobbyWebSocketEventListener {
@@ -30,6 +30,14 @@ public class LobbyWebSocketEventListener {
 
     private final Map<String, String> sessionIdToUsername = new ConcurrentHashMap<>();
 
+    /**
+     * Constructs a LobbyWebSocketEventListener with the required dependencies.
+     *
+     * @param userRepository    repository for user data access and status updates
+     * @param lobbyService      service for retrieving the current online player list
+     * @param messagingTemplate template for broadcasting messages to WebSocket topics
+     * @param gameService       service used to abandon active games on disconnect
+     */
     public LobbyWebSocketEventListener(UserRepository userRepository,
             LobbyService lobbyService,
             SimpMessagingTemplate messagingTemplate, GameService gameService) {
@@ -39,6 +47,12 @@ public class LobbyWebSocketEventListener {
         this.gameService = gameService;
     }
 
+    /**
+     * Handles a new WebSocket session connection.
+     * Sets the connecting user's status to ONLINE and broadcasts the updated player list.
+     *
+     * @param event the session connected event containing the user's principal and session ID
+     */
     @EventListener
     public void handleSessionConnected(SessionConnectedEvent event) {
         String username = getUsername(event.getUser());
@@ -56,6 +70,13 @@ public class LobbyWebSocketEventListener {
         broadcastOnlinePlayers();
     }
 
+    /**
+     * Handles a WebSocket session disconnection.
+     * Sets the disconnecting user's status to OFFLINE (unless they are IN_GAME),
+     * abandons any active games, and broadcasts the updated player list.
+     *
+     * @param event the session disconnect event containing the session ID and user principal
+     */
     @EventListener
     public void handleSessionDisconnected(SessionDisconnectEvent event) {
         String sessionId = event.getSessionId();
@@ -79,10 +100,19 @@ public class LobbyWebSocketEventListener {
         }
     }
 
+    /**
+     * Extracts the username from a security principal.
+     *
+     * @param principal the security principal, may be null
+     * @return the username string, or null if the principal is null
+     */
     private static String getUsername(java.security.Principal principal) {
         return principal != null ? principal.getName() : null;
     }
 
+    /**
+     * Fetches the current list of online players and broadcasts it to /topic/lobby/players.
+     */
     private void broadcastOnlinePlayers() {
         List<LobbyPlayerDto> players = lobbyService.getOnlinePlayers();
         messagingTemplate.convertAndSend("/topic/lobby/players", players);

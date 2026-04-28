@@ -17,6 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Service class containing the core business logic for lobby operations.
+ * Handles online player listings, game challenges, and lobby chat messaging.
+ */
 @Service
 public class LobbyService {
 
@@ -26,6 +30,15 @@ public class LobbyService {
     private final ChatService chatService;
     private final SimpMessagingTemplate messagingTemplate;
 
+    /**
+     * Constructs a LobbyService with the required repository and service dependencies.
+     *
+     * @param userRepository   repository for user data access
+     * @param gameRepository   repository for game data access
+     * @param gameService      service for game creation and management
+     * @param chatService      service for chat message persistence and retrieval
+     * @param messagingTemplate template for sending WebSocket messages to specific users
+     */
     public LobbyService(UserRepository userRepository,
             GameRepository gameRepository,
             GameService gameService,
@@ -38,6 +51,11 @@ public class LobbyService {
         this.messagingTemplate = messagingTemplate;
     }
 
+    /**
+     * Returns a list of all users currently marked as ONLINE.
+     *
+     * @return a list of LobbyPlayerDto objects representing online users
+     */
     @Transactional(readOnly = true)
     public List<LobbyPlayerDto> getOnlinePlayers() {
         return userRepository.findByStatus(UserStatus.ONLINE).stream()
@@ -45,6 +63,12 @@ public class LobbyService {
                 .toList();
     }
 
+    /**
+     * Returns all pending game challenges received by the specified user.
+     *
+     * @param userId the ID of the user to check for incoming challenges
+     * @return a list of ChallengeDto objects representing games waiting for the user to accept
+     */
     @Transactional(readOnly = true)
     public List<ChallengeDto> getPendingChallengesFor(Long userId) {
         return gameRepository.findByInvitedPlayerIdAndStatus(userId, GameStatus.WAITING_FOR_PLAYER).stream()
@@ -56,6 +80,13 @@ public class LobbyService {
                 .toList();
     }
 
+    /**
+     * Creates a game challenge from one user to another and notifies the invited user via WebSocket.
+     *
+     * @param challengerId  the ID of the user sending the challenge
+     * @param invitedUserId the ID of the user being challenged
+     * @return a GameDto representing the newly created challenge game
+     */
     @Transactional
     public GameDto createChallenge(Long challengerId, Long invitedUserId) {
         GameDto game = gameService.createChallenge(challengerId, invitedUserId);
@@ -70,14 +101,24 @@ public class LobbyService {
     }
 
     /**
-     * Persist lobby message to DB, push to Redis cache, and return DTO for
-     * broadcast.
+     * Persists a lobby chat message to the database and returns its DTO for broadcast.
+     *
+     * @param userId   the ID of the user sending the message
+     * @param username the username of the sender
+     * @param content  the text content of the message
+     * @return a ChatMessageDto representing the saved message
      */
     @Transactional
     public ChatMessageDto sendLobbyChatMessage(Long userId, String username, String content) {
         return chatService.sendLobbyMessage(userId, username, content);
     }
 
+    /**
+     * Returns the most recent lobby chat messages up to the specified limit.
+     *
+     * @param limit the maximum number of messages to retrieve
+     * @return a list of ChatMessageDto objects ordered by recency
+     */
     @Transactional(readOnly = true)
     public List<ChatMessageDto> getRecentLobbyChat(int limit) {
         return chatService.getRecentLobbyMessages(limit);
