@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./mvnw spring-boot:run)",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":8080 \")",
+      "Bash(findstr \":3000 \")"
+    ]
+  }
+}
